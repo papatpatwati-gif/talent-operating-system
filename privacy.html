@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Kebijakan Privasi — TOS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container" style="padding-bottom: 100px;">
+    <div class="card static-page-card">
+      <a href="/" class="back-link">← Kembali ke Beranda</a>
+
+      <h1>Kebijakan Privasi</h1>
+      <p class="subtitle">Talent Operating System (TOS)</p>
+
+      <h2>1. Ringkasan</h2>
+      <p>Kami menghargai privasi Anda. Dokumen ini menjelaskan data apa yang kami kumpulkan, bagaimana kami menggunakannya, dan hak-hak Anda terkait data tersebut.</p>
+
+      <h2>2. Data yang Dikumpulkan</h2>
+      <table class="data-table">
+        <tr>
+          <th>Jenis Data</th>
+          <th>Contoh</th>
+          <th>Tujuan</th>
+        </tr>
+        <tr>
+          <td>Input Form</td>
+          <td>Tujuan karier, status, gaya kerja, catatan personal</td>
+          <td>Menghasilkan analisis AI yang personal</td>
+        </tr>
+        <tr>
+          <td>Hasil Analisis</td>
+          <td>Skor archetype, roadmap, summary</td>
+          <td>Disimpan di browser Anda (localStorage)</td>
+        </tr>
+        <tr>
+          <td>Progress Mingguan</td>
+          <td>Checkbox minggu 1-14</td>
+          <td>Tracking progres di browser Anda</td>
+        </tr>
+        <tr>
+          <td>Data Teknis</td>
+          <td>Alamat IP, user agent</td>
+          <td>Keamanan, rate limiting, pencegahan abuse</td>
+        </tr>
+      </table>
+
+      <h2>3. Bagaimana Data Diproses</h2>
+      <ul>
+        <li><strong>Input form</strong> Anda dikirim ke Google Gemini AI melalui server kami untuk menghasilkan analisis.</li>
+        <li><strong>Hasil analisis</strong> disimpan di browser Anda (localStorage). Kami <strong>tidak menyimpan</strong> hasil di server kami.</li>
+        <li><strong>Data teknis</strong> (IP address) digunakan hanya untuk rate limiting dan keamanan, tidak untuk identifikasi personal.</li>
+      </ul>
+
+      <h2>4. Pihak Ketiga</h2>
+      <p>Data input Anda diproses melalui:</p>
+      <ul>
+        <li><strong>Google Gemini AI</strong> — untuk menghasilkan analisis. Tunduk pada <a href="https://policies.google.com/privacy" target="_blank">Kebijakan Privasi Google</a>.</li>
+        <li><strong>Vercel</strong> — hosting dan serverless functions. Tunduk pada <a href="https://vercel.com/legal/privacy-policy" target="_blank">Kebijakan Privasi Vercel</a>.</li>
+      </ul>
+
+      <h2>5. Penyimpanan Data</h2>
+      <ul>
+        <li>Data hasil analisis disimpan <strong>hanya di browser Anda</strong> (localStorage).</li>
+        <li>Kami <strong>tidak memiliki database</strong> yang menyimpan data personal Anda.</li>
+        <li>Data di browser dapat Anda hapus kapan saja melalui tombol "Mulai Ulang" atau membersihkan cache browser.</li>
+      </ul>
+
+      <h2>6. Hak Anda</h2>
+      <p>Anda berhak untuk:</p>
+      <ul>
+        <li><strong>Mengakses</strong> — Semua data tersimpan di browser Anda dan bisa diakses kapan saja.</li>
+        <li><strong>Menghapus</strong> — Gunakan tombol "Mulai Ulang" atau bersihkan cache browser.</li>
+        <li><strong>Menolak</strong> — Anda bisa berhenti menggunakan layanan kapan saja.</li>
+        <li><strong>Portabilitas</strong> — Anda bisa mengunduh hasil analisis dalam format PDF.</li>
+      </ul>
+
+      <h2>7. Keamanan</h2>
+      <p>Kami menerapkan langkah-langkah keamanan berikut:</p>
+      <ul>
+        <li>API key tersimpan aman di server (environment variables), tidak terekspos ke browser.</li>
+        <li>Rate limiting untuk mencegah penyalahgunaan.</li>
+        <li>CORS validation untuk memastikan hanya domain resmi yang bisa mengakses API.</li>
+        <li>HTTPS untuk enkripsi data dalam transit.</li>
+      </ul>
+
+      <h2>8. Cookie</h2>
+      <p>Kami <strong>tidak menggunakan cookies</strong>. Data disimpan menggunakan localStorage browser yang hanya bisa diakses oleh domain kami.</p>
+
+      <h2>9. Perubahan Kebijakan</h2>
+      <p>Kebijakan ini dapat diperbarui sewaktu-waktu. Tanggal pembaruan terakhir tercantum di bagian bawah halaman ini.</p>
+
+      <h2>10. Kontak</h2>
+      <p>Jika Anda memiliki pertanyaan tentang privasi:</p>
+      <ul>
+        <li>WhatsApp: <a href="https://wa.me/6285794506290">+62 857 9450 6290</a></li>
+        <li>Email: <a href="mailto:yanaroyana462@gmail.com">yanaroyana462@gmail.com</a></li>
+      </ul>
+
+      <div class="update-date">
+        Terakhir diperbarui: <strong>Februari 2026</strong>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/index.html" class="nav-item"><i class="fa-solid fa-chart-simple"></i><span>Analisis</span></a><a href="/riwayat.html" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>Riwayat</span></a>
+    <a href="/panduan.html" class="nav-item"><i class="fa-solid fa-book-open"></i><span>Panduan</span></a><a href="/about.html" class="nav-item"><i class="fa-solid fa-user"></i><span>Tentang</span></a>
+    <a href="/admin.html" id="admin-nav-link" class="nav-item" style="display: none; color: var(--warning);"><i class="fa-solid fa-user-shield"></i><span>Admin</span></a>
+  </nav>
+</body>
+</html>

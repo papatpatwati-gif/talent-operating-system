@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Tentang Saya — TOS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .profile-img {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid var(--accent);
+      margin-bottom: 16px;
+    }
+    .social-links {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 24px;
+    }
+    .social-links a {
+      font-size: 24px;
+      color: var(--muted);
+      transition: color 0.2s;
+    }
+    .social-links a:hover {
+      color: var(--accent);
+    }
+    .expertise-section {
+    margin-top: 10px;
+    margin-bottom: 30px;
+}
+
+.tech-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.tech-badge {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: 0.3s;
+}
+
+.tech-badge:hover {
+    border-color: var(--gold);
+    color: var(--text);
+    background: rgba(212, 175, 55, 0.05);
+}
+
+.tech-badge img {
+    width: 14px;
+    filter: grayscale(1) brightness(1.5);
+}
+/* Social */
+        .socials {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .icon-link {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            background: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+        }
+
+        .icon-link:hover { background: var(--gold); }
+        .icon-link img { width: 18px; filter: brightness(0) invert(1); }
+  </style>
+</head>
+<body>
+  <div class="container" style="padding-bottom: 100px;">
+    <div class="card" style="text-align: center;">
+      <a href="/" class="back-link" style="float: left;">← Kembali ke Beranda</a>
+      <br><br>
+
+      <!-- Ganti dengan URL gambar profil Anda -->
+      <img src="https://blogger.googleusercontent.com/img/a/AVvXsEhm2I5NiUGgSNMOTRZD0p9pPuL20PBk0dwOaaFCk0JYTR8lj65JDhEOhluz2Mx_lQ-OAxuSmc_bZYJBt0x9Lr6tpuA7-qq-uMINEbZLwbVswEhXBqEYgLV96Zictq8vOnwMi73b1UE9LrUoSKvrF5ylBRNQN18kEMQhuuXdEGoL7hheRrll01tYLeJGsMTT=s150" alt="Foto Profil" class="profile-img">
+
+      <h1>Tentang Saya</h1>
+      <p class="subtitle">Yana Royana</p>
+
+      <p style="max-width: 600px; margin: 0 auto; color: #cbd5e1;">
+        Assalamu alaikum! Saya Yana, pembuat di balik Talent Operating System. Saya memiliki hasrat untuk teknologi, pengembangan diri, dan bagaimana keduanya dapat digabungkan untuk membantu orang mencapai potensi penuh mereka.
+      </p>
+      <p style="max-width: 600px; margin: 16px auto 0; color: #cbd5e1;">
+        TOS lahir dari pengamatan saya bahwa banyak orang berbakat merasa terjebak atau bingung tentang langkah karier selanjutnya. Proyek ini adalah upaya saya untuk menyediakan alat yang praktis, personal, dan dapat ditindaklanjuti untuk menjembatani kesenjangan antara potensi dan realitas.
+      </p>
+<div class="expertise-section">
+    <h2 class="section-title">Keahlian & Teknologi</h2>
+    <div class="tech-grid">
+        <div class="tech-badge">
+            <img src="https://cdn-icons-png.flaticon.com/512/5968/5968263.png" alt="JS"> 
+            Fullstack Development
+        </div>
+        <div class="tech-badge">
+            <img src="https://cdn-icons-png.flaticon.com/512/11865/11865338.png" alt="AI"> 
+            AI Integration (Gemini/LLM)
+        </div>
+        <div class="tech-badge">
+            <img src="https://cdn-icons-png.flaticon.com/512/5968/5968705.png" alt="Cloud"> 
+            Firebase Cloud Ecosystem
+        </div>
+        <div class="tech-badge">
+            <img src="https://cdn-icons-png.flaticon.com/512/919/919851.png" alt="React"> 
+            Web App Architecture
+        </div>
+        <div class="tech-badge">
+            <img src="https://cdn-icons-png.flaticon.com/512/2103/2103633.png" alt="Strategy"> 
+            Digital Strategy
+       
+        </div>
+    </div>
+</div>
+      <div class="social-links">
+        <!-- Ganti dengan link sosial media Anda -->
+       <a href="https://kaffahmedia.web.id/" class="icon-link"><img src="https://cdn-icons-png.flaticon.com/512/1006/1006771.png"></a>
+        <a href="https://facebook.com/yana.abu.fillah" class="icon-link"><img src="https://cdn-icons-png.flaticon.com/512/124/124010.png"></a>
+      <a href="https://instagram.com/abu_fillah24" class="icon-link"><img src="https://cdn-icons-png.flaticon.com/512/174/174855.png"></a>
+        <a href="https://linkedin.com/in/yana-royana-43133a2b3/" class="icon-link"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png"></a>
+      </div>
+
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/index.html" class="nav-item"><i class="fa-solid fa-chart-simple"></i><span>Analisis</span></a><a href="/riwayat.html" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>Riwayat</span></a>
+    <a href="/panduan.html" class="nav-item"><i class="fa-solid fa-book-open"></i><span>Panduan</span></a><a href="/about.html" class="nav-item active"><i class="fa-solid fa-user"></i><span>Tentang</span></a>
+    <a href="/admin.html" id="admin-nav-link" class="nav-item" style="display: none; color: var(--warning);"><i class="fa-solid fa-user-shield"></i><span>Admin</span></a>
+  </nav>
+
+  <!-- Pastikan Anda memiliki Font Awesome untuk ikon sosial media -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+</body>
+</html>

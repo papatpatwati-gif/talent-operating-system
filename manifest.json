@@ -1,0 +1,21 @@
+{
+  "name": "Talent Operating System",
+  "short_name": "TOS",
+  "description": "Peta Aksi Personal untuk Pengembangan Karier Digital Anda.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070b14",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
