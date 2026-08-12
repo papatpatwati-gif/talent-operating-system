@@ -44,8 +44,8 @@
       Temukan jalur karier dan keahlian yang paling relevan untuk Anda. TOS menggunakan AI untuk menganalisis tujuan, gaya kerja, dan hambatan Anda, lalu menyusun peta jalan yang personal dan dapat ditindaklanjuti.
     </p>
     <div class="landing-actions" style="width: 100%; max-width: 320px; margin: 2rem auto 0;">
-      <button class="btn ghost" id="loginButton" aria-label="Masuk atau mulai analisis" style="width: 100%;">
-        <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Login untuk Memulai
+      <button class="btn ghost" id="startButton" aria-label="Mulai analisis" style="width: 100%;">
+        <i class="fa-solid fa-play" aria-hidden="true"></i> Mulai Analisis
       </button>
     </div>
     <p style="margin-top:2rem; font-size:12px; color:#475569;">
@@ -231,88 +231,12 @@
     </div>
   </main>
 
-  <!-- ===== LOGIN MODAL ===== -->
- <div id="loginModal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true">
-    <div class="modal-box">
-      <button id="closeModal" class="modal-close" aria-label="Tutup modal">&times;</button>
-      
-      <!-- ===== LOGIN VIEW ===== -->
-      <div id="loginView" style="display: block;">
-        <h3 id="login-title">Selamat Datang</h3>
-        <p class="modal-subtitle">Masuk untuk simpan roadmap AI Anda</p>
-        
-        <form id="loginForm">
-          <div class="question" style="margin-bottom:15px;">
-            <label for="loginEmail" class="modal-label">Alamat Email</label>
-            <input type="email" id="loginEmail" placeholder="nama@email.com" required>
-          </div>
-          
-          <div class="question" style="margin-bottom:10px;">
-            <label for="loginPassword" class="modal-label">Password</label>
-            <input type="password" id="loginPassword" placeholder="••••••••" required>
-          </div>
-          
-          <a href="#" id="forgotPasswordLink" class="auth-link">Lupa password?</a>
-          
-          <button type="submit" id="loginSubmitButton" class="btn" style="width:100%; height:48px;">Masuk Sekarang</button>
-        </form>
-
-        <div class="auth-divider"><span>ATAU</span></div>
-
-        <button id="googleLoginButton" class="btn google-btn"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="Google"> Lanjutkan dengan Google</button>
-
-        <p class="switch-auth-link">Belum punya akun? <a href="#" id="switchToSignUp">Daftar di sini</a></p>
-      </div>
-
-      <!-- ===== SIGN UP VIEW ===== -->
-      <div id="signUpView" style="display: none;">
-        <h3>Buat Akun Baru</h3>
-        <p class="modal-subtitle">Dapatkan akses ke analisis karier personal</p>
-        <form id="signUpForm">
-          <div class="question" style="margin-bottom:15px;">
-            <label for="signUpEmail" class="modal-label">Alamat Email</label>
-            <input type="email" id="signUpEmail" placeholder="nama@email.com" required>
-          </div>
-          <div class="question" style="margin-bottom:15px;">
-            <label for="signUpWhatsapp" class="modal-label">Nomor WhatsApp</label>
-            <input type="tel" id="signUpWhatsapp" placeholder="081234567890" required>
-          </div>
-          <div class="question" style="margin-bottom:20px;">
-            <label for="signUpPassword" class="modal-label">Password</label>
-            <input type="password" id="signUpPassword" placeholder="Minimal 6 karakter" required>
-          </div>
-          <button type="submit" id="signUpSubmitButton" class="btn" style="width:100%; height:48px;">Daftar Sekarang</button>
-        </form>
-        <p class="switch-auth-link">Sudah punya akun? <a href="#" id="switchToLogin">Masuk di sini</a></p>
-      </div>
-
-      <!-- ===== RESET PASSWORD VIEW ===== -->
-      <div id="resetPasswordView" style="display: none;">
-        <h3>Reset Password</h3>
-        <p class="modal-subtitle">Kami akan mengirim link pemulihan</p>
-        <div class="question">
-          <label for="resetEmail" class="modal-label">Email Terdaftar</label>
-          <input type="email" id="resetEmail" placeholder="Masukkan email Anda" required>
-        </div>
-        <button id="sendResetEmailButton" class="btn" style="width:100%; margin-top:10px;">Kirim Link Reset</button>
-        <p class="switch-auth-link"><a href="#" id="backToLoginLink">&larr; Kembali ke Login</a></p>
-      </div>
-
-      <p id="authError" class="auth-error"></p>
-    </div>
-  </div>
-
-  <!-- Firebase SDKs (v9 Compat) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
   <script src="/script.js"></script>
   <nav class="bottom-nav">
     <a href="/index.html" class="nav-item active"><i class="fa-solid fa-chart-simple"></i><span>Analisis</span></a>
     <a href="/riwayat.html" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>Riwayat</span></a>
     <a href="/panduan.html" class="nav-item"><i class="fa-solid fa-book-open"></i><span>Panduan</span></a>
     <a href="/about.html" class="nav-item"><i class="fa-solid fa-user"></i><span>Tentang</span></a>
-    <a href="/admin.html" id="admin-nav-link" class="nav-item" style="display: none; color: var(--warning);"><i class="fa-solid fa-user-shield"></i><span>Admin</span></a>
   </nav>
 </body>
 </html>

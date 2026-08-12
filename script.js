@@ -696,8 +696,6 @@ OUTPUT HANYA JSON VALID tanpa markdown/backtick:
   };
   localStorage.setItem('savedAnalysis', JSON.stringify(dataToSave));
   displayResults(result);
-  // BARU: Simpan ke Firestore (Cloud) jika user login
-  saveAnalysisToCloud(result, profile);
 
   showToast('Analisis berhasil!', 'success');
 }
@@ -715,307 +713,29 @@ function useFallback(profile) {
   showToast('AI tidak tersedia. Menampilkan template.', 'error');
 }
 
-// ==================== FIREBASE AUTH ====================
-
-// GANTI DENGAN KONFIGURASI FIREBASE ANDA!
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyBgT0-4srIeRDgsz1DeqGKyrmd7ucOTBFU",
-  authDomain: "talent-operating-system.firebaseapp.com",
-  projectId: "talent-operating-system",
-  storageBucket: "talent-operating-system.firebasestorage.app",
-  messagingSenderId: "625077043272",
-  appId: "1:625077043272:web:a3373a53b81025f850987d",
-  measurementId: "G-4JX31C2VS0"
-};
-
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-
-function setupAuthUI() {
-  const loginModal = document.getElementById('loginModal');
-  const loginButton = document.getElementById('loginButton');
-  const closeModal = document.getElementById('closeModal');
-  const authError = document.getElementById('authError');
-
-  // Elemen Login
-  const loginForm = document.getElementById('loginForm');
-  const loginSubmitButton = document.getElementById('loginSubmitButton');
-  const googleLoginButton = document.getElementById('googleLoginButton');
-  
-  // Elemen Lupa Password
-  const forgotPasswordLink = document.getElementById('forgotPasswordLink');
-  const backToLoginLink = document.getElementById('backToLoginLink');
-  const loginView = document.getElementById('loginView');
-  const resetPasswordView = document.getElementById('resetPasswordView');
-  const loginTitle = document.getElementById('login-title');
-  const sendResetEmailButton = document.getElementById('sendResetEmailButton');
-  
-  // Elemen Sign Up (BARU)
-  const signUpView = document.getElementById('signUpView');
-  const signUpForm = document.getElementById('signUpForm');
-  const signUpSubmitButton = document.getElementById('signUpSubmitButton');
-  const switchToSignUp = document.getElementById('switchToSignUp');
-  const switchToLogin = document.getElementById('switchToLogin');
-
-  // Tampilkan modal
-  loginButton.addEventListener('click', () => {
-    if (auth.currentUser) {
-      // Jika sudah login, tombol berfungsi sebagai logout
-      auth.signOut().then(() => {
-        showToast('Anda telah logout.', 'info');
-        // Hapus data analisis lokal saat logout agar user baru bisa mulai
-        localStorage.removeItem('savedAnalysis');
-        // Muat ulang halaman untuk kembali ke landing page
-        setTimeout(() => location.reload(), 1000);
-      });
-    } else {
-      // Jika belum login, tampilkan modal
-      loginModal.style.display = 'flex';
-      document.getElementById('loginEmail').focus();
-    }
-  });
-
-  // Sembunyikan modal
-  const hideModal = () => { 
-    loginModal.style.display = 'none';
-    authError.textContent = '';
-    // Reset ke tampilan login
-    loginView.style.display = 'block';
-    signUpView.style.display = 'none';
-    resetPasswordView.style.display = 'none';
-    loginTitle.textContent = 'Selamat Datang';
-  };
-  closeModal.addEventListener('click', hideModal);
-  loginModal.addEventListener('click', (e) => { if (e.target === loginModal) hideModal(); });
-
-  // =================================================
-  // === HANDLER UNTUK SETIAP AKSI OTENTIKASI ======
-  // =================================================
-
-  // Handle submit form login
-  loginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    
-    loginSubmitButton.disabled = true;
-    loginSubmitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-    authError.textContent = '';
-
-    auth.signInWithEmailAndPassword(email, password)
-      .then(userCredential => {
-        hideModal();
-      })
-      .catch(err => {
-        switch (err.code) {
-          case 'auth/user-not-found':
-          case 'auth/wrong-password':
-          case 'auth/invalid-credential':
-            authError.textContent = 'Email atau password salah.';
-            break;
-          default:
-            authError.textContent = 'Terjadi kesalahan. Coba lagi.';
-            break;
-        }
-      })
-      .finally(() => {
-        loginSubmitButton.disabled = false;
-        loginSubmitButton.innerHTML = 'Login';
-      });
-  });
-
-  // Handle login dengan Google
-  googleLoginButton.addEventListener('click', () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider)
-      .then(result => {
-        hideModal();
-      })
-      .catch(error => {
-        authError.textContent = 'Gagal login dengan Google. Coba lagi.';
-        console.error("Google Sign-In Error:", error);
-      });
-  });
-
-  // Handle submit form Sign Up (BARU)
-  signUpForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const email = document.getElementById('signUpEmail').value;
-    const password = document.getElementById('signUpPassword').value;
-    const whatsapp = document.getElementById('signUpWhatsapp').value;
-
-    if (password.length < 6) {
-      authError.textContent = 'Password harus minimal 6 karakter.';
-      return;
-    }
-
-    signUpSubmitButton.disabled = true;
-    signUpSubmitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-    authError.textContent = '';
-
-    auth.createUserWithEmailAndPassword(email, password)
-      .then(userCredential => {
-        const user = userCredential.user;
-        // Buat dokumen user di Firestore dengan data tambahan
-        const newUser = {
-          email: user.email,
-          whatsapp: whatsapp,
-          analysisCredits: 3, // BARU: Beri 3 kredit analisis awal
-          isActive: false,
-          role: 'user',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        return db.collection('users').doc(user.uid).set(newUser);
-      })
-      .then(() => {
-        auth.signOut(); // Langsung logout agar admin bisa aktivasi
-        showToast('Pendaftaran berhasil! Akun Anda akan segera diaktifkan.', 'info');
-        hideModal();
-      })
-      .catch(err => {
-        authError.textContent = err.code === 'auth/email-already-in-use' ? 'Email ini sudah terdaftar.' : 'Gagal mendaftar. Coba lagi.';
-      }).finally(() => {
-        signUpSubmitButton.disabled = false;
-        signUpSubmitButton.innerHTML = 'Daftar Sekarang';
-      });
-  });
-
-  // Handle Lupa Password
-  forgotPasswordLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    loginTitle.textContent = 'Reset Password';
-    loginView.style.display = 'none';
-    resetPasswordView.style.display = 'block';
-    authError.textContent = '';
-    document.getElementById('resetEmail').focus();
-  });
-
-  backToLoginLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    loginTitle.textContent = 'Selamat Datang';
-    loginView.style.display = 'block';
-    resetPasswordView.style.display = 'none';
-    authError.textContent = '';
-  });
-
-  sendResetEmailButton.addEventListener('click', () => {
-    const email = document.getElementById('resetEmail').value;
-    if (!email) {
-      authError.textContent = 'Email tidak boleh kosong.';
-      return;
-    }
-    auth.sendPasswordResetEmail(email)
-      .then(() => {
-        showToast('Email untuk reset password telah dikirim!', 'success');
-        hideModal();
-      })
-      .catch(error => {
-        authError.textContent = 'Gagal mengirim email. Pastikan email benar.';
-      });
-  });
-
-  // Handle perpindahan antara Login dan Sign Up (BARU)
-  switchToSignUp.addEventListener('click', (e) => {
-    e.preventDefault();
-    loginView.style.display = 'none';
-    signUpView.style.display = 'block';
-    authError.textContent = '';
-  });
-  switchToLogin.addEventListener('click', (e) => {
-    e.preventDefault();
-    signUpView.style.display = 'none';
-    loginView.style.display = 'block';
-    authError.textContent = '';
-  });
-}
-
-// ==================== FIREBASE DB & AUTH STATE ====================
-
-const db = firebase.firestore();
+// ==================== MODE APLIKASI LOKAL ====================
 
 function initializeApp() {
   const landing = document.getElementById('landing-container');
   const wizard = document.getElementById('wizard-container');
   const savedData = localStorage.getItem('savedAnalysis');
-  let currentUserData = null; // BARU: Simpan data user
+  const startButton = document.getElementById('startButton');
 
-  // Setup Firebase Auth UI & State
-  setupAuthUI();
-  auth.onAuthStateChanged(user => {
-    const loginButton = document.getElementById('loginButton'); // Tombol di landing page
-    const adminNav = document.getElementById('admin-nav-link'); // Link nav admin
-
-    if (user) {
-      // User is signed in.
-      db.collection('users').doc(user.uid).get().then(doc => {
-        if (doc.exists) {
-          currentUserData = doc.data(); // BARU: Simpan data user
-          
-          // Tampilkan tombol logout
-          loginButton.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> Logout (${user.email.split('@')[0]})`;
-          loginButton.classList.add('authed');
-
-          // Tampilkan nav admin jika role-nya admin
-          if (currentUserData.role === 'admin' && adminNav) {
-            adminNav.style.display = 'flex';
-          }
-
-          if (!currentUserData.isActive) {
-            // Akun tidak aktif
-            landing.innerHTML = `
-              <div class="card" style="text-align:center; animation: fadeIn 0.5s ease;">
-                <h1>Akun Belum Aktif</h1>
-                <p class="lead">Akun Anda sedang dalam peninjauan dan akan segera diaktifkan oleh admin. Terima kasih atas kesabaran Anda.</p>
-                <button class="btn" id="inactiveLogoutButton" style="margin-top: 1rem;">Logout</button>
-              </div>`;
-            landing.style.display = 'flex';
-            wizard.style.display = 'none';
-            
-            // Tambahkan event listener ke tombol logout yang baru dibuat
-            document.getElementById('inactiveLogoutButton').addEventListener('click', () => {
-              auth.signOut();
-            });
-            return;
-          }
-
-          // Akun aktif, lanjutkan seperti biasa
-          // BARU: Update UI dengan sisa kredit
-          updateCreditUI(currentUserData.analysisCredits);
-
-          showToast(`Selamat datang, ${user.email}!`, 'success');
-          if (!localStorage.getItem('savedAnalysis')) {
-            startNewAnalysis();
-          }
-
-        } else {
-          // Dokumen user tidak ditemukan (misal: login via Google pertama kali)
-          // Logika pendaftaran via email sudah ditangani di signUpForm handler
-          const newUser = { email: user.email, whatsapp: user.phoneNumber || '', analysisCredits: 3, isActive: false, role: 'user', createdAt: firebase.firestore.FieldValue.serverTimestamp() };
-          db.collection('users').doc(user.uid).set(newUser).then(() => {
-            auth.signOut(); // Logout user agar admin bisa aktivasi
-            showToast('Pendaftaran berhasil! Akun Anda akan segera diaktifkan.', 'info');
-          });
-        }
-      })
-
-    } else {
-      // User is signed out.
-      loginButton.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Login untuk Memulai';
-      loginButton.classList.remove('authed');
-      if(adminNav) adminNav.style.display = 'none';
-      currentUserData = null; // BARU: Reset data user saat logout
-    }
-  });
+  if (startButton) {
+    startButton.innerHTML = '<i class="fa-solid fa-play"></i> Mulai Analisis';
+    startButton.classList.remove('authed');
+    startButton.addEventListener('click', () => {
+      landing.style.display = 'none';
+      wizard.style.display = 'block';
+      showStep(1);
+    });
+  }
 
   if (savedData) {
-    // Load saved analysis
     landing.style.display = 'none';
     wizard.style.display = 'block';
     try {
       const saved = JSON.parse(savedData).analysis;
-      // Cek apakah 14 minggu sudah selesai
       if (getProgress(14) === 14) {
         displayResults(saved);
         document.getElementById('restartButton').disabled = true;
@@ -1030,35 +750,6 @@ function initializeApp() {
       console.error('Corrupt data:', e);
       localStorage.removeItem('savedAnalysis');
       showToast('Data rusak. Silakan mulai ulang.', 'error');
-    }
-  }
-  
-  // Fungsi untuk memulai wizard analisis baru
-  function startNewAnalysis() {
-    landing.style.display = 'none';
-    wizard.style.display = 'block';
-    showStep(1);
-  }
-
-  // BARU: Fungsi untuk update UI kredit
-  function updateCreditUI(credits) {
-    const generateButton = document.getElementById('generateButton');
-    const backToStep2Button = document.getElementById('backToStep2');
-    const creditDisplay = document.getElementById('credit-display');
-
-    if (creditDisplay) {
-      creditDisplay.textContent = `Sisa kesempatan analisis: ${credits}`;
-    }
-
-    if (credits <= 0) {
-      generateButton.disabled = true;
-      generateButton.innerHTML = '<i class="fa-solid fa-lock"></i> Batas Analisis Habis';
-      backToStep2Button.disabled = true;
-      if (creditDisplay) creditDisplay.style.color = 'var(--danger)';
-    } else {
-      generateButton.disabled = false;
-      generateButton.innerHTML = '<i class="fa-solid fa-sparkles"></i> Analisis Profil dengan AI';
-      backToStep2Button.disabled = false;
     }
   }
 }
@@ -1093,36 +784,3 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
-
-async function saveAnalysisToCloud(analysisData, profileData) {
-  const user = auth.currentUser;
-  
-  if (!user) {
-    console.log("User tidak login, data disimpan di localStorage saja.");
-    return;
-  }
-
-  try {
-    // BARU: Kurangi kredit pengguna di Firestore
-    const userRef = db.collection('users').doc(user.uid);
-    await userRef.update({
-      analysisCredits: firebase.firestore.FieldValue.increment(-1)
-    });
-
-    showToast('Menyinkronkan ke Cloud...', 'info');
-    
-    // Simpan ke koleksi 'users' berdasarkan UID mereka
-    await userRef.collection('analyses').add({
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      profile: profileData,
-      analysis: analysisData,
-      archetype: analysisData.top_archetype || 'Unknown'
-    });
-
-    showToast('Data berhasil tersinkron!', 'success');
-
-  } catch (error) {
-    console.error("Gagal simpan ke Cloud:", error);
-    showToast('Gagal sinkron awan, data tetap aman di HP.', 'error');
-  }
-}

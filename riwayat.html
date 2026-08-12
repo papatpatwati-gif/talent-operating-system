@@ -14,14 +14,13 @@
     <div class="card static-page-card">
       <h1><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent);"></i> Riwayat Analisis</h1>
       <p class="subtitle">
-        Semua analisis Anda yang tersimpan di cloud. Klik salah satu untuk memuat ulang.
+        Semua analisis yang tersimpan di browser Anda. Anda dapat memuat kembali hasil terakhir kapan saja.
       </p>
 
       <div id="history-container">
-        <!-- Riwayat akan dimuat di sini oleh JavaScript -->
         <div class="loader-container">
           <div class="loader"><span></span><span></span><span></span></div>
-          <p style="font-size:14px">Memuat riwayat Anda...</p>
+          <p style="font-size:14px">Memuat riwayat lokal...</p>
         </div>
       </div>
 
@@ -33,16 +32,7 @@
     <a href="/riwayat.html" class="nav-item active"><i class="fa-solid fa-clock-rotate-left"></i><span>Riwayat</span></a>
     <a href="/panduan.html" class="nav-item"><i class="fa-solid fa-book-open"></i><span>Panduan</span></a>
     <a href="/about.html" class="nav-item"><i class="fa-solid fa-user"></i><span>Tentang</span></a>
-    <a href="/admin.html" id="admin-nav-link" class="nav-item" style="display: none; color: var(--warning);"><i class="fa-solid fa-user-shield"></i><span>Admin</span></a>
   </nav>
-
-  <!-- Firebase SDKs (v9 Compat) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-  
-  <!-- Script untuk halaman riwayat -->
-  <script src="/riwayat.js"></script>
 
 </body>
 </html>
