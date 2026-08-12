@@ -80,12 +80,12 @@ export default async function handler(req, res) {
   // ======================
   // Validate API Key
   // ======================
-  const API_KEY = process.env.GEMINI_API_KEY;
+  const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.API_KEY;
 
   if (!API_KEY) {
     console.error('[TOS] GEMINI_API_KEY tidak ditemukan.');
-    return res.status(500).json({
-      message: 'Konfigurasi server tidak lengkap.'
+    return res.status(503).json({
+      message: 'Layanan AI belum dikonfigurasi. Silakan aktifkan API key di environment server.'
     });
   }
 
