@@ -5,6 +5,108 @@
 
 const API_ENDPOINT = '/api/generate';
 
+// ==================== USER SESSION & TRACKING ====================
+
+// 1. Tentukan Nama Aplikasi Tempat Skrip Ini Dipasang
+const CURRENT_APP_NAME = "Talent Operating System";
+
+// 2. AMBIL DATA DINAMIS DARI BROWSER (Hasil Login User)
+const savedUser = JSON.parse(localStorage.getItem("app_user"));
+
+// Jika belum login / data kosong, lempar balik ke halaman login
+if (!savedUser || !savedUser.name) {
+  window.location.href = "index.html";
+}
+
+// Set currentUser (sudah pasti ada karena sudah dicek di atas)
+const currentUser = {
+  name: savedUser.name,
+  phone: savedUser.phone
+};
+
+// Helper Pendeteksi Perangkat
+function getDeviceType() {
+  const ua = navigator.userAgent;
+  if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) return "Tablet";
+  if (/Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) return "Mobile";
+  return "Desktop";
+}
+
+// 3. URL Webhook Google Apps Script Anda
+const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzCaJaVYhxGkpCfEJ2-ga7IedvvAbAq1uOqLBZnZ1WP0ZejDrgHIg-qlBarcSdMa5Zrow/exec";
+
+// Fungsi Log Event (dengan error handling)
+function logEvent(eventName = "page_view", extraData = {}) {
+  const payload = {
+    appName: CURRENT_APP_NAME,
+    userName: currentUser.name,
+    userPhone: currentUser.phone,
+    event: eventName,
+    path: window.location.pathname,
+    device: getDeviceType(),
+    userAgent: navigator.userAgent,
+    dateStr: new Date().toISOString().split('T')[0],
+    ...extraData
+  };
+
+  // A. Simpan ke Firestore (jika Firebase tersedia)
+  if (typeof db !== 'undefined' && typeof firebase !== 'undefined') {
+    db.collection("analytics_logs").add({
+      ...payload,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(err => console.error("Tracking Error (Firestore):", err));
+  } else {
+    console.warn("Firebase tidak tersedia. Pastikan Firebase SDK sudah diload di halaman.");
+  }
+
+  // B. Simpan Otomatis ke Google Sheets (opsional)
+  if (GOOGLE_SHEETS_WEBHOOK_URL) {
+    fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).catch(err => console.error("Tracking Error (Sheets):", err));
+  }
+}
+
+// 4. Update Presence Tracking (dengan error handling)
+function trackPresence() {
+  // Cek apakah Firebase Realtime Database tersedia
+  if (typeof rtdb === 'undefined' || typeof firebase === 'undefined') {
+    console.warn("Firebase Realtime DB tidak tersedia. Presence tracking dilewati.");
+    return;
+  }
+
+  const sessionRef = rtdb.ref("online_users").push();
+  const connectedRef = rtdb.ref(".info/connected");
+
+  connectedRef.on("value", (snap) => {
+    if (snap.val() === true) {
+      sessionRef.onDisconnect().remove();
+      sessionRef.set({
+        appName: CURRENT_APP_NAME,
+        userName: currentUser.name,
+        userPhone: currentUser.phone,
+        path: window.location.pathname,
+        device: getDeviceType(),
+        joinedAt: firebase.database.ServerValue.TIMESTAMP
+      }).catch(err => console.error("Presence Tracking Error:", err));
+    }
+  });
+}
+
+// Otomatis jalankan saat halaman dibuka (hanya jika di halaman app.html atau halaman yang memerlukan tracking)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    logEvent("page_view");
+    trackPresence();
+  });
+} else {
+  logEvent("page_view");
+  trackPresence();
+}
+
 // ==================== UTILITIES ====================
 
 function showToast(msg, type = 'info') {

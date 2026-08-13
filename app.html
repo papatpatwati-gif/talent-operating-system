@@ -1,0 +1,265 @@
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TOS — Talent Operating System | AI Career Planner</title>
+
+  <!-- SEO Meta Tags -->
+  <!-- TAMBAHKAN INI — SEO & OG Tags -->
+  <meta name="description" content="TOS menggunakan AI untuk menganalisis tujuan, gaya kerja, dan hambatan Anda, lalu menyusun roadmap karier personal 14 minggu.">
+  <meta name="keywords" content="karier, AI, talent, skill, roadmap, personal development">
+  <meta property="og:title" content="TOS — Talent Operating System">
+  <meta property="og:description" content="Temukan jalur karier terbaik Anda dengan AI. Analisis dalam 2 menit.">
+  <meta property="og:image" content="https://yourdomain.com/public/og-image.png">
+  <meta property="og:url" content="https://talent-operating-system.kaffahmedia.web.id/">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#070b14">
+
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- PWA & Favicon -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/style.css">
+  <!-- PDF Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+  <!-- Firebase SDK (v8 Compat Library) - untuk tracking & analytics -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  
+  <script>
+    // Inisialisasi Firebase (sama seperti di index.html)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAeQj-6xz403bvDnjZgkd4EpLjXTRxU_kA",
+      authDomain: "tracking-c4b07.firebaseapp.com",
+      databaseURL: "https://tracking-c4b07-default-rtdb.firebaseio.com",
+      projectId: "tracking-c4b07",
+      storageBucket: "tracking-c4b07.firebasestorage.app",
+      messagingSenderId: "612213120692",
+      appId: "1:612213120692:web:ec20bbc4a14d34933c41e1",
+      measurementId: "G-0KZCP91RPH"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const rtdb = firebase.database();
+  </script>
+</head>
+<body>
+  <!-- Skip to Content (A11y) -->
+  <a href="#wizard" class="skip-link">Langsung ke konten utama</a>
+
+  <!-- ===== LANDING ===== -->
+  <div id="landing-container" class="landing-container" role="banner">
+    <div style="margin-bottom:1rem;">
+      <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh88Avpl2W5M0Chg2H_vQDxiu6Qx1p5utQArKaMlhTkr2lyW5BACkR4nX_3bOkxYgXZBHMwdwatqzim1qwpE6L6hWrlCi9g-eesT5Nd3k6LtCjZkXR-nqGmpGsd_5COSwl5cxF77T2z75jLzCD-cnF0UHZy8jhjxYwWvvYNU6mhm1NYF2JOLKxWlf5yHVcE/s320/dreamina-2026-02-22-4301-Minimalist_flat_vector_style_logo__abstr...-removebg-preview.png" alt="TOS Logo" class="logo-img" width="80" height="80">
+    </div>
+    <h1>Talent Operating System</h1>
+    <p class="lead" style="max-width:600px; margin:1rem auto 2rem;">
+      Temukan jalur karier dan keahlian yang paling relevan untuk Anda. TOS menggunakan AI untuk menganalisis tujuan, gaya kerja, dan hambatan Anda, lalu menyusun peta jalan yang personal dan dapat ditindaklanjuti.
+    </p>
+    <div class="landing-actions" style="width: 100%; max-width: 320px; margin: 2rem auto 0;">
+      <button class="btn ghost" id="startButton" aria-label="Mulai analisis" style="width: 100%;">
+        <i class="fa-solid fa-play" aria-hidden="true"></i> Mulai Analisis
+      </button>
+    </div>
+    <p style="margin-top:2rem; font-size:12px; color:#475569;">
+      <a href="/terms.html" style="color:var(--muted);">Syarat & Ketentuan</a> •
+      <a href="/privacy.html" style="color:var(--muted);">Kebijakan Privasi</a>
+    </p>
+  </div>
+
+  <!-- ===== WIZARD ===== -->
+  <main id="wizard-container" style="display:none;" role="main">
+    <div class="container">
+      <div class="card">
+        <header style="text-align:center; margin-bottom:2rem;">
+          <div style="margin-bottom:0.5rem;">
+            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh88Avpl2W5M0Chg2H_vQDxiu6Qx1p5utQArKaMlhTkr2lyW5BACkR4nX_3bOkxYgXZBHMwdwatqzim1qwpE6L6hWrlCi9g-eesT5Nd3k6LtCjZkXR-nqGmpGsd_5COSwl5cxF77T2z75jLzCD-cnF0UHZy8jhjxYwWvvYNU6mhm1NYF2JOLKxWlf5yHVcE/s320/dreamina-2026-02-22-4301-Minimalist_flat_vector_style_logo__abstr...-removebg-preview.png" alt="TOS Logo" class="logo-img-small" width="60" height="60">
+          </div>
+          <h1>Talent Operating System</h1>
+          <p class="lead">AI-Powered Career & Skill Personalization</p>
+        </header>
+
+        <!-- Step Indicators -->
+        <nav class="step-indicator" aria-label="Progress langkah">
+          <span id="ind-1" class="ind active" aria-current="step"><i class="fa-solid fa-user-gear" aria-hidden="true"></i> Fokus</span>
+          <span id="ind-2" class="ind"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Gaya</span>
+          <span id="ind-3" class="ind"><i class="fa-solid fa-route" aria-hidden="true"></i> Rute</span>
+        </nav>
+
+        <div id="wizard">
+
+          <!-- ===== STEP 1 ===== -->
+          <section class="step active" id="step1" aria-labelledby="step1-title">
+            <div class="grid">
+              <div>
+                <h3 class="section-title" id="step1-title"><i class="fa-solid fa-bullseye" aria-hidden="true"></i> Intensi Utama</h3>
+                <div class="question">
+                  <label for="q_goal">Apa aspirasi terbesarmu saat ini?</label>
+                  <select id="q_goal" aria-required="true">
+                    <option value="income">💰 Menambah Arus Kas (Side Income)</option>
+                    <option value="reorg">🔄 Transisi Karier (Pivot)</option>
+                    <option value="potensi">💎 Eksplorasi Bakat Terpendam</option>
+                    <option value="usaha">🚀 Membangun Fondasi Bisnis</option>
+                  </select>
+                </div>
+                <div class="question">
+                  <label for="q_status">Status Profesional Saat Ini</label>
+                  <select id="q_status" aria-required="true">
+                    <option value="student">🎓 Pelajar/Mahasiswa</option>
+                    <option value="unemployed">🔍 Mencari Peluang Baru</option>
+                    <option value="employee">💼 Karyawan Aktif</option>
+                    <option value="housewife">🏠 Ibu Rumah Tangga</option>
+                    <option value="entrepreneur">🏗️ Self-Employed / Freelancer</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <h3 class="section-title"><i class="fa-solid fa-clock" aria-hidden="true"></i> Kapasitas & Alat</h3>
+                <div class="question">
+                  <label for="q_time">Alokasi waktu untuk eksplorasi</label>
+                  <select id="q_time" aria-required="true">
+                    <option value="0">⚡ Sangat Terbatas (&lt; 15m/hari)</option>
+                    <option value="1">🌱 Konsisten Ringan (15-30m/hari)</option>
+                    <option value="2">🌿 Serius (30-60m/hari)</option>
+                    <option value="3">🌳 Intensif (&gt; 1 jam/hari)</option>
+                  </select>
+                </div>
+                <div class="question">
+                  <label for="q_device">Amunisi Perangkat</label>
+                  <select id="q_device" aria-required="true">
+                    <option value="phone">📱 Mobile-Only</option>
+                    <option value="phone_lap">💻 Entry-Level Laptop / Tablet</option>
+                    <option value="laptop">🖥️ Laptop Standar Kerja</option>
+                    <option value="pc">🚀 High-Performance Setup</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:24px; display:flex; justify-content:flex-end;">
+              <button class="btn" id="toStep2">Konfigurasi Gaya Kerja <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+            </div>
+          </section>
+
+          <!-- ===== STEP 2 ===== -->
+          <section class="step" id="step2" aria-labelledby="step2-title">
+            <h3 class="section-title" id="step2-title"><i class="fa-solid fa-brain" aria-hidden="true"></i> Gaya Kerja & Hambatan</h3>
+            <div class="grid">
+              <div class="question">
+                <label for="q_env">Kondisi Ruang Kerja</label>
+                <select id="q_env" aria-required="true">
+                  <option value="3">🧘 Sunyi & Terkendali</option>
+                  <option value="2">🏢 Lingkungan Kantor/Kampus</option>
+                  <option value="1">☕ Publik (Kafe/Co-working)</option>
+                  <option value="0">🔊 Dinamis & Banyak Gangguan</option>
+                </select>
+              </div>
+              <div class="question">
+                <label for="q_barrier">Bloking Mental Terbesar</label>
+                <select id="q_barrier" aria-required="true">
+                  <option value="time">⏰ Tidak punya waktu konsisten</option>
+                  <option value="device">🛠️ Alat tidak memadai</option>
+                  <option value="conf">📉 Kurang percaya diri / Imposter Syndrome</option>
+                  <option value="noidea">🧩 Kewalahan dengan informasi (Overwhelmed)</option>
+                </select>
+              </div>
+            </div>
+
+            <fieldset style="border:none; padding:0; margin:0 0 20px;">
+              <legend style="font-weight:600; margin-bottom:10px; font-size:14px; color:#cbd5e1;">Metode Eksekusi Favorit</legend>
+              <div class="grid">
+                <label class="radio-card" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.querySelector('input').click();}">
+                  <input type="radio" name="workstyle" value="structured" checked>
+                  <div class="card-content">
+                    <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                    <span><b>Terstruktur</b><br><small>Suka instruksi jelas & step-by-step</small></span>
+                  </div>
+                </label>
+                <label class="radio-card" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.querySelector('input').click();}">
+                  <input type="radio" name="workstyle" value="improv">
+                  <div class="card-content">
+                    <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                    <span><b>Improvisasi</b><br><small>Lebih suka trial & error serta kebebasan</small></span>
+                  </div>
+                </label>
+              </div>
+            </fieldset>
+
+            <div class="question">
+              <label for="q_text">Konteks Tambahan (Deep Context) <span style="color:var(--danger);">*</span></label>
+              <textarea id="q_text" aria-required="true" placeholder="Contoh: 'Saya suka menulis tapi benci jualan', atau 'Saya hanya bisa fokus di malam hari saat anak tidur'..."></textarea>
+              <p style="color:#64748b; margin-top:5px; font-size:13px;">*Wajib diisi. Semakin detail ceritamu, semakin akurat analisis AI.</p>
+            </div>
+            <p id="credit-display" style="text-align: right; font-size: 13px; color: var(--muted); margin-bottom: 1rem;"></p>
+
+            <div style="margin-top:20px; display:flex; gap:12px; justify-content:space-between;">
+              <button class="btn ghost" id="backToStep1"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i> Kembali</button>
+              <button class="btn" id="generateButton"><i class="fa-solid fa-sparkles" aria-hidden="true"></i> Analisis Profil dengan AI</button>
+            </div>
+          </section>
+
+          <!-- ===== STEP 3 (RESULTS) ===== -->
+          <section class="step" id="step3" aria-labelledby="archetype-title">
+            <div class="result-card" id="result-card">
+              <div style="text-align:center; margin-bottom:1.5rem;">
+                <span class="badge"><i class="fa-solid fa-bolt" aria-hidden="true"></i> AI Personal Planner</span>
+              </div>
+              <h2 id="archetype-title" style="text-align:center; margin-bottom:1rem;">Blueprint Aksi Anda</h2>
+
+              <div style="margin-bottom:2rem;">
+                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;">
+                  <span>Relevansi Strategi</span>
+                  <span id="score-val">0%</span>
+                </div>
+                <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                  <i id="progbar"></i>
+                </div>
+              </div>
+
+              <div id="summary" class="summary-box"></div>
+              <div id="paths" style="margin-top:1.5rem;"></div>
+
+              <h3 style="font-size:1.2rem; margin:2rem 0 1rem;">
+                <i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Roadmap 14 Minggu
+              </h3>
+              <div id="plan"></div>
+            </div>
+
+            <div class="action-buttons" style="margin-top:24px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <button class="btn ghost" id="backToStep2" style="grid-column:span 2;"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Sesuaikan Input</button>
+              <button class="btn" id="downloadButton" style="background:#10b981;"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Simpan PDF</button>
+              <button class="btn" id="shareButton" style="background:#8b5cf6;"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Bagikan</button>
+              <button class="btn ghost" id="restartButton" style="grid-column:span 2; border-color:rgba(248,113,113,0.3); color:var(--danger);">
+                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Mulai Ulang
+              </button>
+            </div>
+          </section>
+
+        </div>
+
+        <footer>
+          TOS Engine v3.0 • Powered by Google Gemini AI<br>
+         
+        </footer>
+      </div>
+    </div>
+  </main>
+
+  <script src="/script.js"></script>
+  <nav class="bottom-nav">
+    <a href="/app.html" class="nav-item active"><i class="fa-solid fa-chart-simple"></i><span>Analisis</span></a>
+    <a href="/riwayat.html" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>Riwayat</span></a>
+    <a href="/panduan.html" class="nav-item"><i class="fa-solid fa-book-open"></i><span>Panduan</span></a>
+    <a href="/about.html" class="nav-item"><i class="fa-solid fa-user"></i><span>Tentang</span></a>
+  </nav>
+</body>
+</html>
