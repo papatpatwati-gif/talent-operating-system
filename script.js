@@ -172,18 +172,158 @@ console.log('[TOS] currentUser initialized:', currentUser);
 // Otomatis jalankan tracking saat halaman dibuka
 if (document.readyState === 'loading') {
   console.log('[TOS] Document still loading, waiting for DOMContentLoaded...');
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     console.log('[TOS] DOMContentLoaded fired, starting tracking...');
-    logEvent("page_view");
-    trackPresence();
+    try {
+      await logEvent("page_view");
+      console.log('[TOS] logEvent completed');
+    } catch (err) {
+      console.error('[TOS] logEvent failed:', err);
+    }
+    
+    try {
+      await trackPresence();
+      console.log('[TOS] trackPresence completed');
+    } catch (err) {
+      console.error('[TOS] trackPresence failed:', err);
+    }
   });
 } else {
   console.log('[TOS] Document already loaded, starting tracking immediately...');
-  logEvent("page_view");
-  trackPresence();
+  (async () => {
+    try {
+      await logEvent("page_view");
+      console.log('[TOS] logEvent completed');
+    } catch (err) {
+      console.error('[TOS] logEvent failed:', err);
+    }
+    
+    try {
+      await trackPresence();
+      console.log('[TOS] trackPresence completed');
+    } catch (err) {
+      console.error('[TOS] trackPresence failed:', err);
+    }
+  })();
 }
 
 console.log('[TOS] Script.js loaded successfully');
+
+// ==================== INITIALIZATION ====================
+
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('[TOS] Setting up UI event listeners...');
+  
+  // Setup Start Button (Landing → Wizard)
+  const startBtn = document.getElementById('startButton');
+  if (startBtn) {
+    startBtn.addEventListener('click', () => {
+      console.log('[TOS] startButton clicked, showing wizard...');
+      const landing = document.getElementById('landing-container');
+      const wizard = document.getElementById('wizard-container');
+      if (landing) landing.style.display = 'none';
+      if (wizard) wizard.style.display = 'block';
+      showStep(1);
+      logEvent('wizard_started');
+    });
+    console.log('[TOS] startButton listener attached');
+  } else {
+    console.warn('[TOS] startButton not found in DOM');
+  }
+  
+  // Setup Navigation Buttons
+  const toStep2Btn = document.getElementById('toStep2');
+  if (toStep2Btn) {
+    toStep2Btn.addEventListener('click', () => {
+      console.log('[TOS] Moving to step 2...');
+      showStep(2);
+    });
+  }
+  
+  const backToStep1Btn = document.getElementById('backToStep1');
+  if (backToStep1Btn) {
+    backToStep1Btn.addEventListener('click', () => {
+      console.log('[TOS] Moving back to step 1...');
+      showStep(1);
+    });
+  }
+  
+  const backToStep2Btn = document.getElementById('backToStep2');
+  if (backToStep2Btn) {
+    backToStep2Btn.addEventListener('click', () => {
+      console.log('[TOS] Moving back to step 2...');
+      showStep(2);
+    });
+  }
+  
+  // Setup Generate Button (Analyze)
+  const generateBtn = document.getElementById('generateButton');
+  if (generateBtn) {
+    generateBtn.addEventListener('click', async () => {
+      console.log('[TOS] generateButton clicked, collecting form data...');
+      
+      const inputs = {
+        goal: document.getElementById('q_goal')?.value,
+        status: document.getElementById('q_status')?.value,
+        time: document.getElementById('q_time')?.value,
+        device: document.getElementById('q_device')?.value,
+        text: document.getElementById('q_text')?.value || '',
+        obstacles: document.getElementById('q_obstacles')?.value || '',
+        skills: document.getElementById('q_skills')?.value || ''
+      };
+      
+      console.log('[TOS] Form inputs collected:', inputs);
+      
+      if (!inputs.goal || !inputs.status || !inputs.time || !inputs.device) {
+        showToast('Mohon lengkapi semua pertanyaan wajib', 'error');
+        console.warn('[TOS] Incomplete form data');
+        return;
+      }
+      
+      await generateAnalysis(inputs);
+    });
+    console.log('[TOS] generateButton listener attached');
+  } else {
+    console.warn('[TOS] generateButton not found in DOM');
+  }
+  
+  // Setup PDF Download Button
+  const downloadBtn = document.getElementById('downloadButton');
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', () => {
+      console.log('[TOS] downloadButton clicked');
+      downloadPDF();
+    });
+  }
+  
+  // Setup Share Button
+  const shareBtn = document.getElementById('shareButton');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', () => {
+      console.log('[TOS] shareButton clicked');
+      if (navigator.share) {
+        const url = window.location.href;
+        navigator.share({ title: 'Talent Operating System', text: 'Check my career analysis!', url });
+      } else {
+        showToast('Fitur share tidak didukung di browser ini', 'info');
+      }
+    });
+  }
+  
+  // Setup Restart Button
+  const restartBtn = document.getElementById('restartButton');
+  if (restartBtn) {
+    restartBtn.addEventListener('click', () => {
+      console.log('[TOS] restartButton clicked');
+      localStorage.removeItem('savedAnalysis');
+      location.reload();
+    });
+  }
+  
+  console.log('[TOS] All UI listeners attached successfully');
+});
+
+console.log('[TOS] Initialization code registered');
 
 // ==================== UTILITIES ====================
 
