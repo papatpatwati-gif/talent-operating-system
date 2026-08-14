@@ -1,16 +1,29 @@
 // ============================================================
-// TOS v3.0 — Production JavaScript
-// API Endpoint: /api/api/generate (sesuai struktur Vercel)
+// TOS v3.0 — Production JavaScript (Supabase Integrated)
+// API Endpoint: /api/generate (sesuai struktur Vercel)
 // ============================================================
 
 const API_ENDPOINT = '/api/generate';
+
+// ==================== SUPABASE INITIALIZATION ====================
+
+const SUPABASE_URL = "https://whuzxtfrhdrbfxgkbjmr.supabase.co"; 
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndodXp4dGZyaGRyYmZ4Z2tiam1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MTc4OTUsImV4cCI6MjEwMjI5Mzg5NX0.bl-QVm-ck5LF61TdbIirk6zBBww7P1ocJEtffrjURes";
+
+// Pastikan Supabase SDK ter-load dari CDN sebelum menginisialisasi
+let supabase = null;
+if (window.supabase && typeof window.supabase.createClient === 'function') {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} else {
+  console.warn("Supabase SDK belum dimuat. Pastikan CDN Supabase ada di <head>.");
+}
 
 // ==================== USER SESSION & TRACKING ====================
 
 // 1. Tentukan Nama Aplikasi Tempat Skrip Ini Dipasang
 const CURRENT_APP_NAME = "Talent Operating System";
 
-// 2. AMBIL DATA DINAMIS DARI BROWSER (Hasil Login User)
+// 2. Ambil Data User dari Browser (Hasil Login)
 const savedUser = JSON.parse(localStorage.getItem("app_user"));
 
 // Jika belum login / data kosong, lempar balik ke halaman login
@@ -18,10 +31,10 @@ if (!savedUser || !savedUser.name) {
   window.location.href = "index.html";
 }
 
-// Set currentUser (sudah pasti ada karena sudah dicek di atas)
+// Set currentUser
 const currentUser = {
-  name: savedUser.name,
-  phone: savedUser.phone
+  name: savedUser.name || "Anonim",
+  phone: savedUser.phone || "-"
 };
 
 // Helper Pendeteksi Perangkat
@@ -32,35 +45,47 @@ function getDeviceType() {
   return "Desktop";
 }
 
-// 3. URL Webhook Google Apps Script Anda
+// 3. URL Webhook Google Apps Script (Opsional Backup)
 const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzCaJaVYhxGkpCfEJ2-ga7IedvvAbAq1uOqLBZnZ1WP0ZejDrgHIg-qlBarcSdMa5Zrow/exec";
 
-// Fungsi Log Event (dengan error handling)
-function logEvent(eventName = "page_view", extraData = {}) {
-  const payload = {
-    appName: CURRENT_APP_NAME,
-    userName: currentUser.name,
-    userPhone: currentUser.phone,
-    event: eventName,
-    path: window.location.pathname,
-    device: getDeviceType(),
-    userAgent: navigator.userAgent,
-    dateStr: new Date().toISOString().split('T')[0],
-    ...extraData
-  };
+// 4. Fungsi Log Event ke Supabase & Google Sheets
+async function logEvent(eventName = "page_view", extraData = {}) {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const device = getDeviceType();
 
-  // A. Simpan ke Firestore (jika Firebase tersedia)
-  if (typeof db !== 'undefined' && typeof firebase !== 'undefined') {
-    db.collection("analytics_logs").add({
-      ...payload,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(err => console.error("Tracking Error (Firestore):", err));
-  } else {
-    console.warn("Firebase tidak tersedia. Pastikan Firebase SDK sudah diload di halaman.");
+  // A. Simpan Log ke Supabase
+  if (supabase) {
+    const { error } = await supabase
+      .from('analytics_logs')
+      .insert([
+        {
+          app_name: CURRENT_APP_NAME,
+          user_name: currentUser.name,
+          user_phone: currentUser.phone,
+          event: eventName,
+          path: window.location.pathname,
+          device: device,
+          date_str: todayStr
+        }
+      ]);
+
+    if (error) console.error("Tracking Error (Supabase):", error);
   }
 
-  // B. Simpan Otomatis ke Google Sheets (opsional)
+  // B. Simpan Otomatis ke Google Sheets (Backup)
   if (GOOGLE_SHEETS_WEBHOOK_URL) {
+    const payload = {
+      appName: CURRENT_APP_NAME,
+      userName: currentUser.name,
+      userPhone: currentUser.phone,
+      event: eventName,
+      path: window.location.pathname,
+      device: device,
+      userAgent: navigator.userAgent,
+      dateStr: todayStr,
+      ...extraData
+    };
+
     fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
       method: "POST",
       mode: "no-cors",
@@ -70,33 +95,27 @@ function logEvent(eventName = "page_view", extraData = {}) {
   }
 }
 
-// 4. Update Presence Tracking (dengan error handling)
-function trackPresence() {
-  // Cek apakah Firebase Realtime Database tersedia
-  if (typeof rtdb === 'undefined' || typeof firebase === 'undefined') {
-    console.warn("Firebase Realtime DB tidak tersedia. Presence tracking dilewati.");
-    return;
-  }
+// 5. Update Presence Tracking ke Supabase (online_users)
+async function trackPresence() {
+  if (!supabase || !currentUser.name) return;
 
-  const sessionRef = rtdb.ref("online_users").push();
-  const connectedRef = rtdb.ref(".info/connected");
-
-  connectedRef.on("value", (snap) => {
-    if (snap.val() === true) {
-      sessionRef.onDisconnect().remove();
-      sessionRef.set({
-        appName: CURRENT_APP_NAME,
-        userName: currentUser.name,
-        userPhone: currentUser.phone,
+  const { error } = await supabase
+    .from('online_users')
+    .insert([
+      {
+        app_name: CURRENT_APP_NAME,
+        user_name: currentUser.name,
+        user_phone: currentUser.phone,
         path: window.location.pathname,
         device: getDeviceType(),
-        joinedAt: firebase.database.ServerValue.TIMESTAMP
-      }).catch(err => console.error("Presence Tracking Error:", err));
-    }
-  });
+        last_seen: new Date().toISOString()
+      }
+    ]);
+
+  if (error) console.error("Presence Tracking Error (Supabase):", error);
 }
 
-// Otomatis jalankan saat halaman dibuka (hanya jika di halaman app.html atau halaman yang memerlukan tracking)
+// Otomatis jalankan tracking saat halaman dibuka
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     logEvent("page_view");
@@ -284,6 +303,50 @@ function showStep(n) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// ==================== GENERATE & API HANDLER ====================
+
+async function generateAnalysis(userInputs) {
+  const planEl = document.getElementById('plan');
+  if (planEl) planEl.innerHTML = loaderHTML("Sedang menganalisis profil dan menyusun roadmap...");
+
+  logEvent("generate_analysis_start");
+
+  try {
+    // Call Vercel Serverless Function
+    const response = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userInputs)
+    });
+
+    if (!response.ok) throw new Error("Gagal mengambil respon dari server API");
+
+    const resultData = await response.json();
+    saveAndDisplay(userInputs, resultData);
+    logEvent("generate_analysis_success");
+
+  } catch (err) {
+    console.warn("API Error/Offline, menggunakan Fallback Data:", err);
+
+    const goalKey = userInputs.goal || 'income';
+    const fallbackResult = FALLBACK[goalKey] || FALLBACK.income;
+
+    saveAndDisplay(userInputs, fallbackResult);
+    showToast('Menggunakan analisis offline (Fallback Mode)', 'info');
+    logEvent("generate_analysis_fallback");
+  }
+}
+
+function saveAndDisplay(profileInputs, analysisData) {
+  // Simpan data lengkap ke localStorage untuk download PDF
+  localStorage.setItem('savedAnalysis', JSON.stringify({
+    profile: profileInputs,
+    analysis: analysisData
+  }));
+
+  displayResults(analysisData);
+}
+
 // ==================== PLAN RENDERING ====================
 
 let planData = [];
@@ -292,6 +355,7 @@ let weekIdx = 0;
 function renderPlan(data) {
   planData = data;
   const el = document.getElementById('plan');
+  if (!el) return;
   const total = data.length;
 
   // --- SLIDE VIEW ---
@@ -392,7 +456,6 @@ function renderPlan(data) {
     document.getElementById('togV')?.addEventListener('click', () => showSlide(weekIdx));
   };
 
-  // Start with slide view
   showSlide(weekIdx);
 }
 
@@ -407,49 +470,58 @@ function displayResults(result) {
   };
   const top = result.top_archetype?.toUpperCase() || '';
 
-  // Archetype Title (FIX #9)
-  document.getElementById('archetype-title').innerText =
-    `Anda adalah: ${names[top] || result.top_archetype || 'Blueprint Aksi Anda'}`;
+  // Archetype Title
+  const titleEl = document.getElementById('archetype-title');
+  if (titleEl) {
+    titleEl.innerText = `Anda adalah: ${names[top] || result.top_archetype || 'Blueprint Aksi Anda'}`;
+  }
 
   // Progress Bar
   const topScore = Math.max(...result.scores.map(s => s.score));
   setTimeout(() => {
-    document.getElementById('progbar').style.width = topScore + '%';
-    document.getElementById('score-val').innerText = topScore + '%';
+    const progbar = document.getElementById('progbar');
+    const scoreVal = document.getElementById('score-val');
+    if (progbar) progbar.style.width = topScore + '%';
+    if (scoreVal) scoreVal.innerText = topScore + '%';
   }, 300);
 
   // Summary
-  document.getElementById('summary').innerHTML = `
-    <strong><i class="fa-solid fa-brain" style="color:var(--accent)" aria-hidden="true"></i> Analisis Konteks:</strong><br><br>
-    ${result.summary_text}`;
+  const summaryEl = document.getElementById('summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <strong><i class="fa-solid fa-brain" style="color:var(--accent)" aria-hidden="true"></i> Analisis Konteks:</strong><br><br>
+      ${result.summary_text}`;
+  }
 
-  // Score Cards (FIX #9: Better visual)
+  // Score Cards
   const paths = document.getElementById('paths');
-  paths.innerHTML = '<h3 class="section-title" style="margin-top:1.5rem"><i class="fa-solid fa-chart-bar" aria-hidden="true"></i> Skor Relevansi</h3>';
+  if (paths) {
+    paths.innerHTML = '<h3 class="section-title" style="margin-top:1.5rem"><i class="fa-solid fa-chart-bar" aria-hidden="true"></i> Skor Relevansi</h3>';
 
-  result.scores.sort((a, b) => b.score - a.score).forEach(o => {
-    const isTop = o.archetype.toUpperCase() === top;
-    const color = o.score >= 70 ? 'var(--success)' : o.score >= 40 ? 'var(--warning)' : 'var(--danger)';
-    const label = o.score >= 70 ? 'Siap Jalan' : o.score >= 40 ? 'Menengah' : 'Perlu Persiapan';
-    const d = document.createElement('div');
-    d.className = `score-item ${isTop ? 'top' : ''}`;
-    d.innerHTML = `
-      <div>
-        <strong style="font-size:14px">${isTop ? '👑 ' : ''}${o.archetype.toUpperCase()}</strong>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">${label}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div class="score-bar-bg"><div class="score-bar-fill" style="width:${o.score}%;background:${color}"></div></div>
-        <span style="font-weight:700;font-size:14px;color:${color};min-width:40px;text-align:right">${o.score}%</span>
-      </div>`;
-    paths.appendChild(d);
-  });
+    result.scores.sort((a, b) => b.score - a.score).forEach(o => {
+      const isTop = o.archetype.toUpperCase() === top;
+      const color = o.score >= 70 ? 'var(--success)' : o.score >= 40 ? 'var(--warning)' : 'var(--danger)';
+      const label = o.score >= 70 ? 'Siap Jalan' : o.score >= 40 ? 'Menengah' : 'Perlu Persiapan';
+      const d = document.createElement('div');
+      d.className = `score-item ${isTop ? 'top' : ''}`;
+      d.innerHTML = `
+        <div>
+          <strong style="font-size:14px">${isTop ? '👑 ' : ''}${o.archetype.toUpperCase()}</strong>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${label}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:${o.score}%;background:${color}"></div></div>
+          <span style="font-weight:700;font-size:14px;color:${color};min-width:40px;text-align:right">${o.score}%</span>
+        </div>`;
+      paths.appendChild(d);
+    });
+  }
 
   weekIdx = 0;
   renderPlan(result.plan);
 }
 
-// ==================== PDF DOWNLOAD (FIX #2) ====================
+// ==================== PDF DOWNLOAD (LENGKAP) ====================
 
 function downloadPDF() {
   const savedData = JSON.parse(localStorage.getItem('savedAnalysis'));
@@ -458,7 +530,8 @@ function downloadPDF() {
     return; 
   }
   
-  showToast('Menyiapkan PDF yang rapi...', 'info');
+  showToast('Menyiapkan PDF...', 'info');
+  logEvent('download_pdf');
 
   const saved = savedData.analysis;
   const profile = savedData.profile || {};
@@ -470,11 +543,11 @@ function downloadPDF() {
   // Container Utama untuk PDF
   const el = document.createElement('div');
   el.style.cssText = `
-    padding: 40px; 
+    padding: 30px; 
     font-family: 'Inter', Arial, sans-serif; 
     color: #1f2937; 
     background: #fff; 
-    width: 794px; /* A4 width in pixels at 96 DPI */
+    width: 794px;
     box-sizing: border-box;
   `;
 
@@ -483,68 +556,69 @@ function downloadPDF() {
     <style>
       body { font-family: 'Inter', Arial, sans-serif; color: #1f2937; }
       h1, h2, h3 { color: #111827; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { padding: 12px 15px; border: 1px solid #e5e7eb; text-align: left; }
-      th { background-color: #f3f4f6; font-weight: 600; }
-      .header { text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 15px; margin-bottom: 30px; }
-      .section { margin-bottom: 30px; }
-      .section-title { font-size: 20px; color: #1e3a8a; border-bottom: 1px solid #d1d5db; padding-bottom: 8px; margin-bottom: 15px; }
-      .summary-box { background: #f0f9ff; border-left: 5px solid #2563eb; padding: 20px; font-size: 15px; line-height: 1.7; }
-      .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; font-size: 14px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+      th, td { padding: 10px 12px; border: 1px solid #e5e7eb; text-align: left; }
+      th { background-color: #f3f4f6; font-weight: 600; font-size: 13px; }
+      .header { text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 15px; margin-bottom: 20px; }
+      .section { margin-bottom: 25px; }
+      .section-title { font-size: 18px; color: #1e3a8a; border-bottom: 1px solid #d1d5db; padding-bottom: 6px; margin-bottom: 12px; }
+      .summary-box { background: #f0f9ff; border-left: 4px solid #2563eb; padding: 15px; font-size: 14px; line-height: 1.6; }
+      .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; }
       .profile-item { display: flex; flex-direction: column; }
-      .profile-item span:first-child { font-weight: 600; color: #374151; margin-bottom: 4px; }
+      .profile-item span:first-child { font-weight: 600; color: #374151; }
       .profile-item span:last-child { color: #4b5563; }
       .score-bar-bg { background-color: #e5e7eb; border-radius: 4px; height: 8px; overflow: hidden; }
       .score-bar-fill { height: 100%; border-radius: 4px; }
-      .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #9ca3af; }
+      .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 10px; }
     </style>
 
     <div class="header">
-      <h1 style="color: #1e3a8a; margin: 0; font-size: 28px;">Talent Operating System (TOS)</h1>
-      <p style="color: #4b5563; font-size: 14px; margin: 5px 0;">Laporan Analisis Strategi Personal</p>
+      <h1 style="color: #1e3a8a; margin: 0; font-size: 24px;">Talent Operating System (TOS)</h1>
+      <p style="color: #4b5563; font-size: 13px; margin: 4px 0;">Laporan Analisis Strategi Personal - ${currentUser.name}</p>
     </div>
 
     <div class="section">
-      <h2 class="section-title">Profil Anda</h2>
+      <h2 class="section-title">Profil Pengguna</h2>
       <div class="profile-grid">
         <div class="profile-item"><span>Tujuan Utama:</span> <span>${gL[profile.goal] || 'Tidak diketahui'}</span></div>
         <div class="profile-item"><span>Status Profesional:</span> <span>${sL[profile.status] || 'Tidak diketahui'}</span></div>
         <div class="profile-item"><span>Alokasi Waktu:</span> <span>${profile.time || 'Tidak diketahui'}</span></div>
         <div class="profile-item"><span>Perangkat Utama:</span> <span>${profile.device || 'Tidak diketahui'}</span></div>
       </div>
-      <div class="profile-item" style="margin-top: 15px;">
-        <span>Konteks Tambahan:</span>
-        <span style="font-style: italic;">"${profile.text || 'Tidak ada.'}"</span>
-      </div>
+      ${profile.text ? `
+        <div class="profile-item" style="margin-top: 10px;">
+          <span>Konteks Tambahan:</span>
+          <span style="font-style: italic;">"${profile.text}"</span>
+        </div>` : ''}
     </div>
 
     <div class="section">
       <h2 class="section-title">Hasil Analisis AI</h2>
-      <h3 style="font-size: 18px; margin-bottom: 10px;">Archetype Utama: ${names[top] || top}</h3>
+      <h3 style="font-size: 16px; margin-bottom: 8px;">Archetype Utama: ${names[top] || top}</h3>
       <div class="summary-box">
         <p style="margin: 0;">${saved.summary_text}</p>
       </div>
     </div>
 
     <div class="section">
-      <h3 style="font-size: 18px; margin-bottom: 15px;">Skor Relevansi</h3>
+      <h3 style="font-size: 16px; margin-bottom: 10px;">Skor Relevansi</h3>
       <table>
         <thead>
           <tr>
-            <th style="width: 35%;">Archetype</th>
-            <th>Skor</th>
+            <th style="width: 40%;">Archetype</th>
+            <th>Skor Relevansi</th>
           </tr>
         </thead>
         <tbody>
           ${saved.scores.sort((a, b) => b.score - a.score).map(o => `
             <tr>
-              <td>${names[o.archetype.toUpperCase()] || o.archetype}</td>
+              <td style="font-size: 13px;">${names[o.archetype.toUpperCase()] || o.archetype}</td>
               <td>
                 <div style="display: flex; align-items: center; gap: 10px;">
                   <div class="score-bar-bg" style="flex-grow: 1;">
                     <div class="score-bar-fill" style="width:${o.score}%; background-color: #2563eb;"></div>
                   </div>
-                  <span style="font-weight: 600; font-size: 14px; min-width: 40px; text-align: right;">${o.score}%</span>
+                  <span style="font-weight: 600; font-size: 12px; min-width: 35px; text-align: right;">${o.score}%</span>
                 </div>
               </td>
             </tr>
@@ -558,21 +632,20 @@ function downloadPDF() {
       <table>
         <thead>
           <tr>
-            <th style="width: 10%; text-align: center;">Minggu</th>
+            <th style="width: 12%; text-align: center;">Minggu</th>
             <th>Rencana Aksi</th>
           </tr>
         </thead>
         <tbody>
           ${saved.plan.map((w, i) => `
             <tr>
-              <td style="text-align: center; font-weight: 600; font-size: 16px;">${i + 1}</td>
+              <td style="text-align: center; font-weight: 600; font-size: 14px;">${i + 1}</td>
               <td>
-                <div style="font-weight: 600; margin-bottom: 5px; color: #111827;">${w.title}</div>
-                <div style="color: #4b5563; font-size: 13px; line-height: 1.6;">${w.detail}</div>
+                <div style="font-weight: 600; margin-bottom: 3px; color: #111827; font-size: 13px;">${w.title}</div>
+                <div style="color: #4b5563; font-size: 12px; line-height: 1.5;">${w.detail}</div>
                 ${w.youtube_query ? `
-                  <div style="margin-top: 8px; font-size: 12px; color: #374151;">
-                    <strong><i class="fa-brands fa-youtube" style="color: #ff0000;"></i> Topik Video:</strong> 
-                    <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(w.youtube_query)}" style="color: #2563eb; text-decoration: none;">${w.youtube_query}</a>
+                  <div style="margin-top: 5px; font-size: 11px; color: #374151;">
+                    <strong>Topik Video:</strong> ${w.youtube_query}
                   </div>
                 ` : ''}
               </td>
@@ -583,306 +656,27 @@ function downloadPDF() {
     </div>
 
     <div class="footer">
-      Laporan ini dibuat pada: ${new Date().toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' })} <br>
-      Talent Operating System v3.0
+      <p>Laporan ini dihasilkan secara otomatis oleh Talent Operating System pada ${new Date().toLocaleDateString('id-ID')}</p>
     </div>
   `;
 
-  // Konfigurasi html2pdf
+  // Konversi ke File PDF via html2pdf.js
   const opt = {
-    margin: [15, 10, 15, 10], // [top, left, bottom, right] in mm
-    filename: `TOS-Report-${top}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, logging: false, useCORS: true, dpi: 192, letterRendering: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    margin:       10,
+    filename:     `TOS_Analysis_${currentUser.name.replace(/\s+/g, '_')}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
 
-  // Jalankan Proses
-  html2pdf().set(opt).from(el).save().then(() => {
-    showToast('PDF berhasil diunduh!', 'success');
-  }).catch(err => {
-    console.error("PDF generation error:", err);
-    showToast('Gagal membuat PDF.', 'error');
-  });
-}
-
-// ==================== SHARE (FIX #8) ====================
-
-function shareResult() {
-  const savedData = JSON.parse(localStorage.getItem('savedAnalysis'));
-  if (!savedData || !savedData.analysis) { showToast('Tidak ada data.', 'error'); return; }
-  const saved = savedData.analysis;
-
-  const n = { MICRO: 'Micro-Entrepreneur', REMOTE: 'Remote Professional', SERVICE: 'Service Provider', CRAFT: 'Digital Craftsman' };
-  const top = saved.top_archetype?.toUpperCase() || '';
-  const score = saved.scores.find(s => s.archetype.toUpperCase() === top)?.score || Math.max(...saved.scores.map(s => s.score));
-  const text = `🎯 Hasil Analisis TOS:\n\nArchetype: ${n[top] || saved.top_archetype}\nSkor: ${score}%\n\n${saved.summary_text}\n\nCoba: ${location.href}`;
-
-  if (navigator.share) {
-    navigator.share({ title: 'Hasil TOS', text }).catch(() => { });
+  if (typeof html2pdf !== 'undefined') {
+    html2pdf().set(opt).from(el).save().then(() => {
+      showToast('PDF berhasil diunduh!', 'success');
+    }).catch(err => {
+      console.error("PDF Export Error:", err);
+      showToast('Gagal mengunduh PDF.', 'error');
+    });
   } else {
-    navigator.clipboard.writeText(text)
-      .then(() => showToast('Disalin ke clipboard!', 'success'))
-      .catch(() => showToast('Gagal menyalin.', 'error'));
+    showToast('Library html2pdf belum dimuat pada halaman ini.', 'error');
   }
 }
-
-// ==================== DYNAMIC LOADING ANIMATION ====================
-
-let loadingInterval;
-
-function showLoadingAnimation() {
-  const messages = [
-    'Menganalisis profil Anda...',
-    'Menghubungkan dengan matriks talenta...',
-    'Mengevaluasi potensi tersembunyi...',
-    'Menyusun blueprint aksi personal...',
-    'Mengkalibrasi roadmap 14 minggu...',
-    'Hampir selesai, menyiapkan hasil...'
-  ];
-  let msgIndex = 0;
-
-  const updateText = (text) => {
-    const pElements = document.querySelectorAll('.loader-container p');
-    pElements.forEach(p => {
-      // Simple fade effect for text change
-      p.style.opacity = '0';
-      setTimeout(() => {
-        p.textContent = text;
-        p.style.opacity = '1';
-      }, 250);
-    });
-  };
-
-  updateText(messages[msgIndex]);
-  loadingInterval = setInterval(() => {
-    msgIndex = (msgIndex + 1) % messages.length;
-    updateText(messages[msgIndex]);
-  }, 2500); // Ganti teks setiap 2.5 detik
-}
-
-function hideLoadingAnimation() {
-  if (loadingInterval) clearInterval(loadingInterval);
-}
-
-// ==================== AI CALL (FIX #4, #5, #7 + Retry + Fallback) ====================
-
-async function retry(fn, n = 2, delay = 2500) {
-  for (let i = 0; i <= n; i++) {
-    try { return await fn(); }
-    catch (e) {
-      if (i === n) throw e;
-      console.warn(`Retry ${i + 1}/${n}...`);
-      await new Promise(r => setTimeout(r, delay));
-    }
-  }
-}
-
-async function compute() {
-  const btn = document.getElementById('generateButton');
-  const text = document.getElementById('q_text').value.trim();
-
-  if (!text) {
-    showToast('Harap isi catatan konteks tambahan.', 'error');
-    document.getElementById('q_text').focus();
-    return;
-  }
-
-  // FIX #5: Disable button
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Menganalisis...';
-
-  // FIX #7: Include q_status
-  const profile = {
-    time: ['<15m', '15-30m', '30-60m', '>1h'][parseInt(document.getElementById('q_time').value)],
-    device: document.getElementById('q_device').value,
-    status: document.getElementById('q_status').value,
-    env: document.getElementById('q_env').value,
-    barrier: document.getElementById('q_barrier').value,
-    goal: document.getElementById('q_goal').value,
-    workstyle: document.querySelector('input[name="workstyle"]:checked')?.value || 'structured',
-    text
-  };
-
-  showStep(3);
-  document.getElementById('summary').innerHTML = loaderHTML('...');
-  document.getElementById('plan').innerHTML = loaderHTML('...');
-  document.getElementById('paths').innerHTML = loaderHTML('...');
-  document.getElementById('archetype-title').innerText = 'Sedang menganalisis...';
-  document.getElementById('progbar').style.width = '0%';
-  document.getElementById('score-val').innerText = '0%';
-  showLoadingAnimation();
-
-  try {
-    await retry(() => callAI(profile), 2, 2500);
-  } catch (e) {
-    console.error('All retries failed:', e);
-    useFallback(profile);
-  } finally {
-    // FIX #5: Always re-enable
-    hideLoadingAnimation();
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-sparkles" aria-hidden="true"></i> Analisis Profil dengan AI';
-  }
-}
-
-async function callAI(profile) {
-  const sL = { student: 'Pelajar/Mahasiswa', unemployed: 'Mencari Peluang Baru', employee: 'Karyawan Aktif', housewife: 'Ibu Rumah Tangga', entrepreneur: 'Self-Employed/Freelancer' };
-  const gL = { income: 'Menambah Side Income', reorg: 'Transisi Karier', potensi: 'Eksplorasi Bakat', usaha: 'Membangun Bisnis' };
-  const bL = { time: 'Tidak punya waktu konsisten', device: 'Alat tidak memadai', conf: 'Kurang percaya diri', noidea: 'Kewalahan informasi' };
-
-  const prompt = `Anda adalah sistem pakar karier digital "Talent Operating System" (TOS).
-Profil user:
-- Status: ${sL[profile.status] || profile.status}
-- Tujuan: ${gL[profile.goal] || profile.goal}
-- Waktu: ${profile.time}/hari
-- Perangkat: ${profile.device}
-- Lingkungan: skor ${profile.env}/3
-- Hambatan: ${bL[profile.barrier] || profile.barrier}
-- Gaya kerja: ${profile.workstyle}
-- Catatan: "${profile.text}"
-
-Tugas:
-1. Hitung skor 0-100 untuk: MICRO, REMOTE, SERVICE, CRAFT
-2. Pilih 1 terbaik (top_archetype)
-3. Tulis summary_text 10-15 kalimat personal & memotivasi
-4. Buat rencana TEPAT 14 minggu dengan: title, detail (2-3 kalimat konkret sesuai gaya ${profile.workstyle}), dan youtube_query (satu kata kunci pencarian YouTube yang spesifik dan relevan dalam bahasa Indonesia).
-
-Sesuaikan kesulitan dengan waktu (${profile.time}), perangkat (${profile.device}), status (${sL[profile.status]}).
-
-OUTPUT HANYA JSON VALID tanpa markdown/backtick:
-{"scores":[{"archetype":"MICRO","score":0},{"archetype":"REMOTE","score":0},{"archetype":"SERVICE","score":0},{"archetype":"CRAFT","score":0}],"top_archetype":"...","summary_text":"...","plan":[{"title":"...","detail":"...","youtube_query":"..."}]}`;
-
-  const res = await fetch(API_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: prompt }) // Kirim hanya prompt text
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    // Tampilkan pesan error dari server jika ada, jika tidak, tampilkan pesan default.
-    const errorMessage = err.message || (res.status === 429 ? 'Terlalu banyak permintaan.' : `Terjadi kesalahan server (HTTP ${res.status})`);
-    showToast(errorMessage, 'error');
-    
-    // Lempar error untuk memicu mekanisme retry
-    throw new Error(`HTTP ${res.status}: ${err.message || res.statusText}`);
-  }
-
-  const data = await res.json();
-  if (!data.candidates?.[0]?.content?.parts?.[0]?.text) throw new Error('Respons AI kosong');
-
-  // FIX #4: Robust JSON parsing
-  const raw = data.candidates[0].content.parts[0].text;
-  let result;
-
-  try {
-    const clean = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-    result = JSON.parse(clean);
-
-    // Validate structure
-    if (!result.scores || !Array.isArray(result.scores) || result.scores.length < 4) throw new Error('Scores invalid');
-    if (!result.plan || !Array.isArray(result.plan) || result.plan.length < 10) throw new Error('Plan invalid');
-    if (!result.summary_text) throw new Error('Summary missing');
-    if (!result.top_archetype) {
-      result.top_archetype = result.scores.sort((a, b) => b.score - a.score)[0]?.archetype || 'MICRO';
-    }
-  } catch (pe) {
-    console.error('Parse error:', pe, 'Raw:', raw);
-    throw new Error('AI returned invalid JSON');
-  }
-
-  const dataToSave = {
-    analysis: result,
-    profile: profile
-  };
-  localStorage.setItem('savedAnalysis', JSON.stringify(dataToSave));
-  displayResults(result);
-
-  showToast('Analisis berhasil!', 'success');
-}
-
-function useFallback(profile) {
-  const fb = JSON.parse(JSON.stringify(FALLBACK[profile.goal] || FALLBACK.income));
-  fb.summary_text = `⚠️ [Mode Offline] ${fb.summary_text} — Hasil ini template karena AI tidak tersedia. Coba lagi nanti untuk hasil lebih personal.`;
-  const dataToSave = {
-    analysis: fb,
-    profile: profile
-  };
-  localStorage.setItem('savedAnalysis', JSON.stringify(dataToSave));
-  hideLoadingAnimation(); // Pastikan animasi berhenti jika fallback digunakan
-  displayResults(fb);
-  showToast('AI tidak tersedia. Menampilkan template.', 'error');
-}
-
-// ==================== MODE APLIKASI LOKAL ====================
-
-function initializeApp() {
-  const landing = document.getElementById('landing-container');
-  const wizard = document.getElementById('wizard-container');
-  const savedData = localStorage.getItem('savedAnalysis');
-  const startButton = document.getElementById('startButton');
-
-  if (startButton) {
-    startButton.innerHTML = '<i class="fa-solid fa-play"></i> Mulai Analisis';
-    startButton.classList.remove('authed');
-    startButton.addEventListener('click', () => {
-      landing.style.display = 'none';
-      wizard.style.display = 'block';
-      showStep(1);
-    });
-  }
-
-  if (savedData) {
-    landing.style.display = 'none';
-    wizard.style.display = 'block';
-    try {
-      const saved = JSON.parse(savedData).analysis;
-      if (getProgress(14) === 14) {
-        displayResults(saved);
-        document.getElementById('restartButton').disabled = true;
-        document.getElementById('restartButton').innerHTML = '<i class="fa-solid fa-lock"></i> Roadmap Selesai';
-        showToast('Roadmap telah selesai. Mulai ulang dinonaktifkan.', 'info');
-      } else {
-        displayResults(saved);
-      }
-      showStep(3);
-      showToast('Memuat analisis sebelumnya.', 'info');
-    } catch (e) {
-      console.error('Corrupt data:', e);
-      localStorage.removeItem('savedAnalysis');
-      showToast('Data rusak. Silakan mulai ulang.', 'error');
-    }
-  }
-}
-
-
-// ==================== INIT ====================
-
-document.addEventListener('DOMContentLoaded', () => {
-  initializeApp();
-
-  // Navigation
-  document.getElementById('toStep2')?.addEventListener('click', () => showStep(2));
-  document.getElementById('backToStep1')?.addEventListener('click', () => showStep(1));
-  document.getElementById('backToStep2')?.addEventListener('click', () => showStep(2));
-
-  // Actions
-  document.getElementById('generateButton')?.addEventListener('click', compute);
-  document.getElementById('downloadButton')?.addEventListener('click', downloadPDF);
-  document.getElementById('shareButton')?.addEventListener('click', shareResult);
-
-  // FIX #3 + #10: Reset with confirmation + clear all weeks
-  document.getElementById('restartButton')?.addEventListener('click', async () => {
-    const ok = await showConfirm(
-      'Mulai Ulang Analisis?',
-      'Semua data analisis dan progress akan dihapus permanen.'
-    );
-    if (ok) {
-      localStorage.removeItem('savedAnalysis');
-      for (let i = 0; i < 14; i++) localStorage.removeItem(`week-${i}`);
-      showToast('Data dihapus. Memuat ulang...', 'success');
-      setTimeout(() => location.reload(), 1000);
-    }
-  });
-});
