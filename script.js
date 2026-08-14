@@ -97,22 +97,38 @@ async function logEvent(eventName = "page_view", extraData = {}) {
 
 // 5. Update Presence Tracking ke Supabase (online_users)
 async function trackPresence() {
-  if (!tosSupabase || !currentUser.name) return;
+  if (!tosSupabase || !currentUser.name) {
+    console.debug("Tracking skipped: Supabase not ready or user not logged in");
+    return;
+  }
 
-  const { error } = await tosSupabase
-    .from('online_users')
-    .insert([
-      {
-        app_name: CURRENT_APP_NAME,
-        user_name: currentUser.name,
-        user_phone: currentUser.phone,
-        path: window.location.pathname,
-        device: getDeviceType(),
-        last_seen: new Date().toISOString()
-      }
-    ]);
+  try {
+    const payload = {
+      app_name: CURRENT_APP_NAME,
+      user_name: currentUser.name,
+      user_phone: currentUser.phone,
+      path: window.location.pathname,
+      device: getDeviceType(),
+      last_seen: new Date().toISOString()
+    };
 
-  if (error) console.error("Presence Tracking Error (Supabase):", error);
+    const { data, error } = await tosSupabase
+      .from('online_users')
+      .insert([payload]);
+
+    if (error) {
+      console.error("Presence Tracking Error (Supabase):", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+    } else {
+      console.debug("Presence tracked successfully", data);
+    }
+  } catch (err) {
+    console.error("Presence Tracking Exception:", err);
+  }
 }
 
 // Otomatis jalankan tracking saat halaman dibuka
