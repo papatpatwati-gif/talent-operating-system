@@ -3,6 +3,29 @@
 // API Endpoint: /api/generate (sesuai struktur Vercel)
 // ============================================================
 
+// Global error handler untuk catch semua errors
+window.onerror = function(msg, url, lineNo, colNo, error) {
+  console.error('Global Error:', {
+    message: msg,
+    source: url,
+    lineno: lineNo,
+    colno: colNo,
+    error: error
+  });
+  return false;
+};
+
+// Catch unhandled promise rejections
+window.onunhandledrejection = function(event) {
+  console.error('Unhandled Promise Rejection:', event.reason);
+};
+
+console.log('[TOS] Script.js loading...', {
+  pathname: window.location.pathname,
+  href: window.location.href,
+  timestamp: new Date().toISOString()
+});
+
 const API_ENDPOINT = '/api/generate';
 
 // ==================== SUPABASE INITIALIZATION ====================
@@ -10,12 +33,18 @@ const API_ENDPOINT = '/api/generate';
 const SUPABASE_URL = "https://whuzxtfrhdrbfxgkbjmr.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndodXp4dGZyaGRyYmZ4Z2tiam1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MTc4OTUsImV4cCI6MjEwMjI5Mzg5NX0.bl-QVm-ck5LF61TdbIirk6zBBww7P1ocJEtffrjURes";
 
+console.log('[TOS] Checking Supabase SDK...', { 
+  supabaseLoaded: !!window.supabase,
+  createClientExists: !!(window.supabase && typeof window.supabase.createClient === 'function')
+});
+
 // Pastikan Supabase SDK ter-load dari CDN sebelum menginisialisasi
 let tosSupabase = null;
 if (window.supabase && typeof window.supabase.createClient === 'function') {
   tosSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  console.log('[TOS] Supabase client initialized successfully');
 } else {
-  console.warn("Supabase SDK belum dimuat. Pastikan CDN Supabase ada di <head>.");
+  console.warn("[TOS] Supabase SDK belum dimuat. Pastikan CDN Supabase ada di <head>.");
 }
 
 // ==================== USER SESSION & TRACKING ====================
@@ -26,8 +55,15 @@ const CURRENT_APP_NAME = "Talent Operating System";
 // 2. Ambil Data User dari Browser (Hasil Login)
 const savedUser = JSON.parse(localStorage.getItem("app_user"));
 
+console.log('[TOS] User session check:', {
+  userExists: !!savedUser,
+  userName: savedUser?.name || 'N/A',
+  currentPage: window.location.pathname
+});
+
 // Jika belum login / data kosong, lempar balik ke halaman login
 if (!savedUser || !savedUser.name) {
+  console.log('[TOS] No user session found. Redirecting to index.html...');
   window.location.href = "index.html";
 }
 
@@ -131,16 +167,23 @@ async function trackPresence() {
   }
 }
 
+console.log('[TOS] currentUser initialized:', currentUser);
+
 // Otomatis jalankan tracking saat halaman dibuka
 if (document.readyState === 'loading') {
+  console.log('[TOS] Document still loading, waiting for DOMContentLoaded...');
   document.addEventListener('DOMContentLoaded', () => {
+    console.log('[TOS] DOMContentLoaded fired, starting tracking...');
     logEvent("page_view");
     trackPresence();
   });
 } else {
+  console.log('[TOS] Document already loaded, starting tracking immediately...');
   logEvent("page_view");
   trackPresence();
 }
+
+console.log('[TOS] Script.js loaded successfully');
 
 // ==================== UTILITIES ====================
 
