@@ -11,9 +11,9 @@ const SUPABASE_URL = "https://whuzxtfrhdrbfxgkbjmr.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndodXp4dGZyaGRyYmZ4Z2tiam1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MTc4OTUsImV4cCI6MjEwMjI5Mzg5NX0.bl-QVm-ck5LF61TdbIirk6zBBww7P1ocJEtffrjURes";
 
 // Pastikan Supabase SDK ter-load dari CDN sebelum menginisialisasi
-let supabase = null;
+let tosSupabase = null;
 if (window.supabase && typeof window.supabase.createClient === 'function') {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  tosSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 } else {
   console.warn("Supabase SDK belum dimuat. Pastikan CDN Supabase ada di <head>.");
 }
@@ -54,8 +54,8 @@ async function logEvent(eventName = "page_view", extraData = {}) {
   const device = getDeviceType();
 
   // A. Simpan Log ke Supabase
-  if (supabase) {
-    const { error } = await supabase
+  if (tosSupabase) {
+    const { error } = await tosSupabase
       .from('analytics_logs')
       .insert([
         {
@@ -97,9 +97,9 @@ async function logEvent(eventName = "page_view", extraData = {}) {
 
 // 5. Update Presence Tracking ke Supabase (online_users)
 async function trackPresence() {
-  if (!supabase || !currentUser.name) return;
+  if (!tosSupabase || !currentUser.name) return;
 
-  const { error } = await supabase
+  const { error } = await tosSupabase
     .from('online_users')
     .insert([
       {

@@ -73,10 +73,10 @@
 
   <script>
     // 1. Inisialisasi Supabase Client
-   const SUPABASE_URL = "https://whuzxtfrhdrbfxgkbjmr.supabase.co"; 
+    const SUPABASE_URL = "https://whuzxtfrhdrbfxgkbjmr.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndodXp4dGZyaGRyYmZ4Z2tiam1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MTc4OTUsImV4cCI6MjEwMjI5Mzg5NX0.bl-QVm-ck5LF61TdbIirk6zBBww7P1ocJEtffrjURes";
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const CURRENT_APP_NAME = "Talent Operating System";
 
@@ -109,7 +109,7 @@
     async function logEvent(eventName = "page_view") {
       const todayStr = new Date().toISOString().split('T')[0];
 
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from("analytics_logs")
         .insert([
           {
@@ -130,7 +130,7 @@
     async function trackPresence() {
       if (!currentUser.name) return;
 
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from("online_users")
         .insert([
           {
