@@ -257,44 +257,76 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   // Setup Generate Button (Analyze)
-  const generateBtn = document.getElementById('generateButton');
-  if (generateBtn) {
-    generateBtn.addEventListener('click', async () => {
-      console.log('[TOS] generateButton clicked, collecting form data...');
-      
-      const inputs = {
-        goal: document.getElementById('q_goal')?.value,
-        status: document.getElementById('q_status')?.value,
-        time: document.getElementById('q_time')?.value,
-        device: document.getElementById('q_device')?.value,
-        text: document.getElementById('q_text')?.value || '',
-        obstacles: document.getElementById('q_obstacles')?.value || '',
-        skills: document.getElementById('q_skills')?.value || ''
-      };
-      
-      console.log('[TOS] Form inputs collected:', inputs);
-      
-      if (!inputs.goal || !inputs.status || !inputs.time || !inputs.device) {
-        showToast('Mohon lengkapi semua pertanyaan wajib', 'error');
-        console.warn('[TOS] Incomplete form data');
-        return;
-      }
-      
+const generateBtn = document.getElementById('generateButton');
+if (generateBtn) {
+  generateBtn.addEventListener('click', async (e) => {
+    // 1. Cegah form submit bawaan (jika tombol ada di dalam tag <form>)
+    if (e) e.preventDefault();
+
+    // 2. Anti-Double Click: Jika sedang proses, abaikan klik berikutnya
+    if (generateBtn.disabled) return;
+
+    console.log('[TOS] generateButton clicked, collecting form data...');
+
+    const inputs = {
+      goal: document.getElementById('q_goal')?.value,
+      status: document.getElementById('q_status')?.value,
+      time: document.getElementById('q_time')?.value,
+      device: document.getElementById('q_device')?.value,
+      text: document.getElementById('q_text')?.value || '',
+      obstacles: document.getElementById('q_obstacles')?.value || '',
+      skills: document.getElementById('q_skills')?.value || ''
+    };
+
+    console.log('[TOS] Form inputs collected:', inputs);
+
+    if (!inputs.goal || !inputs.status || !inputs.time || !inputs.device) {
+      showToast('Mohon lengkapi semua pertanyaan wajib', 'error');
+      console.warn('[TOS] Incomplete form data');
+      return;
+    }
+
+    // 3. Simpan teks asli & set status Loading pada tombol
+    const originalText = generateBtn.innerHTML;
+    try {
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = `
+        <span class="inline-flex items-center gap-2">
+          <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Menganalisa...
+        </span>
+      `;
+
+      // Eksekusi fungsi AI Analysis
       await generateAnalysis(inputs);
-    });
-    console.log('[TOS] generateButton listener attached');
-  } else {
-    console.warn('[TOS] generateButton not found in DOM');
-  }
-  
-  // Setup PDF Download Button
-  const downloadBtn = document.getElementById('downloadButton');
-  if (downloadBtn) {
-    downloadBtn.addEventListener('click', () => {
-      console.log('[TOS] downloadButton clicked');
-      downloadPDF();
-    });
-  }
+
+    } catch (err) {
+      console.error('[TOS] Error inside generateAnalysis:', err);
+      showToast('Gagal memproses analisa: ' + (err.message || 'Terjadi kesalahan sistem'), 'error');
+    } finally {
+      // 4. Kembalikan kondisi tombol seperti semula
+      generateBtn.disabled = false;
+      generateBtn.innerHTML = originalText;
+    }
+  });
+
+  console.log('[TOS] generateButton listener attached');
+} else {
+  console.warn('[TOS] generateButton not found in DOM');
+}
+
+// Setup PDF Download Button
+const downloadBtn = document.getElementById('downloadButton');
+if (downloadBtn) {
+  downloadBtn.addEventListener('click', (e) => {
+    if (e) e.preventDefault();
+    console.log('[TOS] downloadButton clicked');
+    downloadPDF();
+  });
+}
   
   // Setup Share Button
   const shareBtn = document.getElementById('shareButton');
@@ -511,7 +543,7 @@ async function generateAnalysis(userInputs) {
   logEvent("generate_analysis_start");
 
   try {
-    // Buat prompt dari user inputs dengan instruksi JSON yang jelas
+    // 1. Buat prompt dengan instruksi JSON eksplisit
     const prompt = `Anda adalah Career AI Advisor berpengalaman. Analisis profil pengguna berikut dan berikan strategi karier yang personal dan actionable.
 
 PROFIL PENGGUNA:
@@ -524,82 +556,145 @@ ${userInputs.obstacles ? `- Hambatan/Tantangan: ${userInputs.obstacles}` : ''}
 ${userInputs.skills ? `- Skill Saat Ini: ${userInputs.skills}` : ''}
 
 INSTRUKSI OUTPUT:
-Berikan response dalam format JSON VALID (bukan Markdown, pure JSON). Struktur wajib:
+Berikan response HANYA berupa JSON VALID murni (tanpa Markdown, tanpa backtick \`\`\`json, tanpa teks pembuka/penutup). Struktur wajib:
 
 {
-  "top_archetype": "MICRO|REMOTE|SERVICE|CRAFT (pilih yang paling relevan)",
-  "summary_text": "Ringkasan 2-3 paragraf rekomendasi karier berdasarkan profil. Gunakan Bahasa Indonesia yang baik.",
+  "top_archetype": "MICRO",
+  "summary_text": "Ringkasan 2-3 paragraf rekomendasi karier berdasarkan profil dalam Bahasa Indonesia.",
   "scores": [
-    {"archetype": "MICRO", "score": 0-100},
-    {"archetype": "REMOTE", "score": 0-100},
-    {"archetype": "SERVICE", "score": 0-100},
-    {"archetype": "CRAFT", "score": 0-100}
+    {"archetype": "MICRO", "score": 85},
+    {"archetype": "REMOTE", "score": 70},
+    {"archetype": "SERVICE", "score": 60},
+    {"archetype": "CRAFT", "score": 50}
   ],
   "plan": [
     {
       "week": 1,
       "focus": "Judul fokus minggu 1 (max 50 karakter)",
       "tasks": ["Task 1", "Task 2", "Task 3"]
-    },
-    // ... hingga week 14
+    }
   ]
 }
 
 KETENTUAN PENTING:
-- JSON HARUS valid dan dapat di-parse
-- Scores harus number 0-100
-- Plan harus array dengan 14 items (minggu 1-14)
-- Setiap task harus praktis dan dapat dikerjakan
-- Summary text gunakan Bahasa Indonesia
-
-ARCHETYPE DEFINITIONS:
-- MICRO: Entrepreneur kecil, bisnis online, side hustle
-- REMOTE: Bekerja jarak jauh, freelancer profesional, digital nomad
-- SERVICE: Jasa konsultasi, coaching, personal branding
-- CRAFT: Keahlian teknis, produk digital, creative work`;
+- JSON HARUS valid dan dapat di-parse secara langsung.
+- Scores harus number 0-100.
+- Plan harus array berisi 14 item (minggu 1 hingga 14).
+- Setiap task harus praktis dan dapat dikerjakan.
+- Archetype yang tersedia: MICRO, REMOTE, SERVICE, CRAFT.`;
 
     console.log('[TOS] Sending API request, prompt length:', prompt.length);
 
-    // Call Vercel Serverless Function dengan format yang benar
+    // 2. Call Vercel Serverless Function / API Endpoint
     const response = await fetch(API_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })  // Wrap dalam { prompt: ... }
+      body: JSON.stringify({ prompt })
     });
 
     console.log('[TOS] API Response status:', response.status);
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorText = await response.text().catch(() => '');
       console.error('[TOS] API Error response:', errorText);
-      throw new Error(`API Error ${response.status}: ${errorText}`);
+      throw new Error(`API Error ${response.status}: ${errorText || response.statusText}`);
     }
 
-    const resultData = await response.json();
-    console.log('[TOS] API Success, result received with archetype:', resultData.top_archetype);
-    saveAndDisplay(userInputs, resultData);
+    const rawResponse = await response.json();
+    console.log('[TOS] Raw API Response received:', rawResponse);
+
+    // 3. Ekstraksi string teks dari berbagai kemungkinan struktur API
+    let rawText = "";
+    if (typeof rawResponse === 'string') {
+      rawText = rawResponse;
+    } else if (rawResponse.result) {
+      rawText = typeof rawResponse.result === 'string' ? rawResponse.result : JSON.stringify(rawResponse.result);
+    } else if (rawResponse.text) {
+      rawText = rawResponse.text;
+    } else if (rawResponse.candidates?.[0]?.content?.parts?.[0]?.text) {
+      rawText = rawResponse.candidates[0].content.parts[0].text; // Gemini Direct
+    } else if (rawResponse.choices?.[0]?.message?.content) {
+      rawText = rawResponse.choices[0].message.content; // OpenAI / Groq
+    } else {
+      // Jika ternyata API langsung mengembalikan objek JSON hasil analisis
+      rawText = JSON.stringify(rawResponse);
+    }
+
+    // 4. Clean Markdown Code Blocks & Parse JSON
+    let parsedData = null;
+    try {
+      // Hilangkan wrapper ```json ... ``` atau ``` ... ``` jika ada
+      let cleanedText = rawText
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
+
+      // Ekstrak hanya karakter dari { sampai } paling akhir
+      const jsonMatch = cleanedText.match(/{[\s\S]*}/);
+      if (jsonMatch) {
+        cleanedText = jsonMatch[0];
+      }
+
+      parsedData = JSON.parse(cleanedText);
+    } catch (parseErr) {
+      console.error('[TOS] Failed to parse JSON response from AI:', parseErr, '\nRaw text was:', rawText);
+      throw new Error('Format respon AI tidak dapat di-parse sebagai JSON');
+    }
+
+    // 5. Validasi Atribut Utama
+    if (!parsedData || !parsedData.top_archetype) {
+      console.warn('[TOS] Parsed JSON lacks required fields:', parsedData);
+      throw new Error('Data analisis dari AI tidak lengkap');
+    }
+
+    console.log('[TOS] API Success, parsed result archetype:', parsedData.top_archetype);
+    
+    // Tampilkan & simpan data hasil analisis sukses
+    saveAndDisplay(userInputs, parsedData);
     logEvent("generate_analysis_success");
 
   } catch (err) {
-    console.error("API Error/Offline, menggunakan Fallback Data:", err);
+    console.error("[TOS] API Error/Parsing Failed, menggunakan Fallback Data:", err);
 
     const goalKey = userInputs.goal || 'income';
-    const fallbackResult = FALLBACK[goalKey] || FALLBACK.income;
+    const fallbackResult = (typeof FALLBACK !== 'undefined' && FALLBACK[goalKey]) 
+      ? FALLBACK[goalKey] 
+      : (typeof FALLBACK !== 'undefined' ? FALLBACK.income : null);
 
-    saveAndDisplay(userInputs, fallbackResult);
-    showToast('Menggunakan analisis offline (Fallback Mode)', 'info');
+    if (fallbackResult) {
+      saveAndDisplay(userInputs, fallbackResult);
+      if (typeof showToast === 'function') {
+        showToast('Menggunakan analisis offline (Fallback Mode)', 'info');
+      }
+    } else {
+      if (planEl) {
+        planEl.innerHTML = `<div class="p-4 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg">
+          Gagal memuat analisis: ${err.message}. Silakan coba beberapa saat lagi.
+        </div>`;
+      }
+    }
     logEvent("generate_analysis_fallback");
   }
 }
 
 function saveAndDisplay(profileInputs, analysisData) {
-  // Simpan data lengkap ke localStorage untuk download PDF
-  localStorage.setItem('savedAnalysis', JSON.stringify({
-    profile: profileInputs,
-    analysis: analysisData
-  }));
+  // Simpan data lengkap ke localStorage untuk download PDF / reload
+  try {
+    localStorage.setItem('savedAnalysis', JSON.stringify({
+      profile: profileInputs,
+      analysis: analysisData,
+      timestamp: new Date().toISOString()
+    }));
+  } catch (e) {
+    console.warn('[TOS] Gagal menyimpan ke localStorage:', e);
+  }
 
-  displayResults(analysisData);
+  // Panggil fungsi render utama
+  if (typeof displayResults === 'function') {
+    displayResults(analysisData);
+  } else {
+    console.error('[TOS] Fungsi displayResults(analysisData) tidak ditemukan!');
+  }
 }
 
 // ==================== PLAN RENDERING ====================
