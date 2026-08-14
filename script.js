@@ -520,7 +520,6 @@ const FALLBACK = {
     ]
   }
 };
-
 // ==================== WIZARD NAVIGATION ====================
 
 function showStep(n) {
@@ -534,13 +533,63 @@ function showStep(n) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// ==================== HELPER / UTILITY FUNCTIONS ====================
+
+function progressHTML(total) {
+  let completed = 0;
+  for (let i = 0; i < total; i++) {
+    if (localStorage.getItem(`week-${i}`) === 'true') completed++;
+  }
+  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  return `
+    <div class="overall-progress-box" style="margin-bottom:15px;background:rgba(255,255,255,0.05);padding:12px;border-radius:8px;border:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px">
+        <span>Progres Pengerjaan Roadmap</span>
+        <span style="font-weight:700;color:var(--accent)">${completed}/${total} Minggu (${pct}%)</span>
+      </div>
+      <div style="background:rgba(255,255,255,0.1);height:6px;border-radius:3px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:var(--success);transition:width .3s ease"></div>
+      </div>
+    </div>
+  `;
+}
+
+function loaderHTML(msg) {
+  return `
+    <div style="text-align:center;padding:40px 20px;">
+      <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;color:var(--accent);margin-bottom:15px"></i>
+      <p style="color:var(--muted);font-size:14px">${msg}</p>
+    </div>
+  `;
+}
+
+function normalizePlanData(planArray) {
+  if (!Array.isArray(planArray)) return [];
+  return planArray.map((item, idx) => {
+    const title = item.title || item.focus || `Minggu ${item.week || idx + 1}`;
+    let detail = item.detail || '';
+    if (!detail && Array.isArray(item.tasks)) {
+      detail = item.tasks.map(t => `• ${t}`).join('<br>');
+    } else if (!detail && typeof item.tasks === 'string') {
+      detail = item.tasks;
+    }
+    const youtube_query = item.youtube_query || item.focus || title;
+    return {
+      week: item.week || idx + 1,
+      title: title,
+      detail: detail || 'Fokus pada implementasi strategi mingguan.',
+      youtube_query: youtube_query
+    };
+  });
+}
+
 // ==================== GENERATE & API HANDLER ====================
 
 async function generateAnalysis(userInputs) {
   const planEl = document.getElementById('plan');
   if (planEl) planEl.innerHTML = loaderHTML("Sedang menganalisis profil dan menyusun roadmap...");
 
-  logEvent("generate_analysis_start");
+  if (typeof logEvent === 'function') logEvent("generate_analysis_start");
 
   try {
     // 1. Buat prompt dengan instruksi JSON eksplisit
@@ -570,8 +619,9 @@ Berikan response HANYA berupa JSON VALID murni (tanpa Markdown, tanpa backtick \
   "plan": [
     {
       "week": 1,
-      "focus": "Judul fokus minggu 1 (max 50 karakter)",
-      "tasks": ["Task 1", "Task 2", "Task 3"]
+      "title": "Judul fokus minggu 1",
+      "detail": "Penjelasan tugas dan langkah praktis minggu 1",
+      "youtube_query": "Kata kunci pencarian tutorial youtube"
     }
   ]
 }
@@ -585,8 +635,10 @@ KETENTUAN PENTING:
 
     console.log('[TOS] Sending API request, prompt length:', prompt.length);
 
-    // 2. Call Vercel Serverless Function / API Endpoint
-    const response = await fetch(API_ENDPOINT, {
+    const endpoint = typeof API_ENDPOINT !== 'undefined' ? API_ENDPOINT : '/api/generate';
+
+    // 2. Call API Endpoint
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt })
@@ -616,20 +668,17 @@ KETENTUAN PENTING:
     } else if (rawResponse.choices?.[0]?.message?.content) {
       rawText = rawResponse.choices[0].message.content; // OpenAI / Groq
     } else {
-      // Jika ternyata API langsung mengembalikan objek JSON hasil analisis
       rawText = JSON.stringify(rawResponse);
     }
 
     // 4. Clean Markdown Code Blocks & Parse JSON
     let parsedData = null;
     try {
-      // Hilangkan wrapper ```json ... ``` atau ``` ... ``` jika ada
       let cleanedText = rawText
         .replace(/```json/gi, '')
         .replace(/```/g, '')
         .trim();
 
-      // Ekstrak hanya karakter dari { sampai } paling akhir
       const jsonMatch = cleanedText.match(/{[\s\S]*}/);
       if (jsonMatch) {
         cleanedText = jsonMatch[0];
@@ -641,39 +690,43 @@ KETENTUAN PENTING:
       throw new Error('Format respon AI tidak dapat di-parse sebagai JSON');
     }
 
-    // 5. Validasi Atribut Utama
+    // 5. Validasi & Normalisasi Atribut Utama
     if (!parsedData || !parsedData.top_archetype) {
       console.warn('[TOS] Parsed JSON lacks required fields:', parsedData);
       throw new Error('Data analisis dari AI tidak lengkap');
     }
 
+    parsedData.plan = normalizePlanData(parsedData.plan);
+
     console.log('[TOS] API Success, parsed result archetype:', parsedData.top_archetype);
     
     // Tampilkan & simpan data hasil analisis sukses
     saveAndDisplay(userInputs, parsedData);
-    logEvent("generate_analysis_success");
+    if (typeof logEvent === 'function') logEvent("generate_analysis_success");
 
   } catch (err) {
     console.error("[TOS] API Error/Parsing Failed, menggunakan Fallback Data:", err);
 
     const goalKey = userInputs.goal || 'income';
-    const fallbackResult = (typeof FALLBACK !== 'undefined' && FALLBACK[goalKey]) 
+    let fallbackResult = (typeof FALLBACK !== 'undefined' && FALLBACK[goalKey]) 
       ? FALLBACK[goalKey] 
       : (typeof FALLBACK !== 'undefined' ? FALLBACK.income : null);
 
     if (fallbackResult) {
+      fallbackResult = JSON.parse(JSON.stringify(fallbackResult));
+      fallbackResult.plan = normalizePlanData(fallbackResult.plan);
       saveAndDisplay(userInputs, fallbackResult);
       if (typeof showToast === 'function') {
         showToast('Menggunakan analisis offline (Fallback Mode)', 'info');
       }
     } else {
       if (planEl) {
-        planEl.innerHTML = `<div class="p-4 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg">
+        planEl.innerHTML = `<div style="padding:15px;background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.2);border-radius:8px">
           Gagal memuat analisis: ${err.message}. Silakan coba beberapa saat lagi.
         </div>`;
       }
     }
-    logEvent("generate_analysis_fallback");
+    if (typeof logEvent === 'function') logEvent("generate_analysis_fallback");
   }
 }
 
@@ -695,6 +748,9 @@ function saveAndDisplay(profileInputs, analysisData) {
   } else {
     console.error('[TOS] Fungsi displayResults(analysisData) tidak ditemukan!');
   }
+
+  // Pindahkan Tampilan Wizard ke Step 3 (Hasil)
+  showStep(3);
 }
 
 // ==================== PLAN RENDERING ====================
@@ -703,10 +759,15 @@ let planData = [];
 let weekIdx = 0;
 
 function renderPlan(data) {
-  planData = data;
+  planData = Array.isArray(data) ? data : [];
   const el = document.getElementById('plan');
   if (!el) return;
-  const total = data.length;
+  const total = planData.length;
+
+  if (total === 0) {
+    el.innerHTML = '<p style="color:var(--muted);text-align:center">Roadmap tidak tersedia.</p>';
+    return;
+  }
 
   // --- SLIDE VIEW ---
   const showSlide = (i) => {
@@ -728,16 +789,16 @@ function renderPlan(data) {
             <input type="checkbox" class="wcb" data-w="${i}" ${ck ? 'checked' : ''} style="width:20px;height:20px;margin-top:5px;accent-color:var(--success);flex-shrink:0" aria-label="Tandai minggu ${i + 1} selesai">
             <div class="wc" style="${ck ? 'opacity:.5;text-decoration:line-through' : ''}">
               <h3 style="margin:0;color:#fff;font-size:1.1rem">${item.title}</h3>
-              <p style="margin-top:10px;color:var(--muted);font-size:14px;line-height:1.7">${item.detail}</p>
+              <div style="margin-top:10px;color:var(--muted);font-size:14px;line-height:1.7">${item.detail}</div>
               ${item.youtube_query ? `
                 <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(item.youtube_query)}"
-                   target="_blank" rel="noopener noreferrer" class="yt-link">
-                  <i class="fa-brands fa-youtube" aria-hidden="true"></i> Cari: "${item.youtube_query}"
+                   target="_blank" rel="noopener noreferrer" class="yt-link" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;color:#ef4444;text-decoration:none;font-size:13px;font-weight:600">
+                  <i class="fa-brands fa-youtube" aria-hidden="true"></i> Cari Video: "${item.youtube_query}"
                 </a>` : ''}
             </div>
           </label>
         </div>
-        <div style="display:flex;justify-content:center;align-items:center;gap:20px">
+        <div style="display:flex;justify-content:center;align-items:center;gap:20px;margin-top:20px">
           <button class="btn-nav" id="pW" ${i === 0 ? 'disabled' : ''} aria-label="Minggu sebelumnya">
             <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
           </button>
@@ -753,11 +814,15 @@ function renderPlan(data) {
     document.querySelector('.wcb')?.addEventListener('change', e => {
       localStorage.setItem(`week-${i}`, e.target.checked);
       const c = e.target.closest('label').querySelector('.wc');
-      c.style.opacity = e.target.checked ? '.5' : '1';
-      c.style.textDecoration = e.target.checked ? 'line-through' : 'none';
+      if (c) {
+        c.style.opacity = e.target.checked ? '.5' : '1';
+        c.style.textDecoration = e.target.checked ? 'line-through' : 'none';
+      }
       const pb = document.querySelector('.overall-progress-box');
       if (pb) pb.outerHTML = progressHTML(total);
-      if (e.target.checked) showToast(`Minggu ${i + 1} selesai! 🎉`, 'success');
+      if (e.target.checked && typeof showToast === 'function') {
+        showToast(`Minggu ${i + 1} selesai! 🎉`, 'success');
+      }
     });
     document.getElementById('pW')?.addEventListener('click', () => {
       if (weekIdx > 0) { weekIdx--; showSlide(weekIdx); }
@@ -783,7 +848,7 @@ function renderPlan(data) {
     planData.forEach((item, i) => {
       const ck = localStorage.getItem(`week-${i}`) === 'true';
       h += `
-        <div class="week-item-mini" data-j="${i}" tabindex="0" role="button" aria-label="Minggu ${i + 1}: ${item.title}">
+        <div class="week-item-mini" data-j="${i}" tabindex="0" role="button" aria-label="Minggu ${i + 1}: ${item.title}" style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;cursor:pointer">
           <div style="min-width:28px;height:28px;border-radius:50%;background:${ck ? 'var(--success)' : 'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0">
             ${ck ? '<i class="fa-solid fa-check" aria-hidden="true"></i>' : i + 1}
           </div>
@@ -812,6 +877,8 @@ function renderPlan(data) {
 // ==================== DISPLAY RESULTS ====================
 
 function displayResults(result) {
+  if (!result) return;
+
   const names = {
     MICRO: '⚡ Micro-Entrepreneur',
     REMOTE: '🌐 Remote Professional',
@@ -826,8 +893,10 @@ function displayResults(result) {
     titleEl.innerText = `Anda adalah: ${names[top] || result.top_archetype || 'Blueprint Aksi Anda'}`;
   }
 
-  // Progress Bar
-  const topScore = Math.max(...result.scores.map(s => s.score));
+  // Progress Bar & Top Score
+  const scores = Array.isArray(result.scores) ? result.scores : [];
+  const topScore = scores.length > 0 ? Math.max(...scores.map(s => s.score || 0)) : 85;
+
   setTimeout(() => {
     const progbar = document.getElementById('progbar');
     const scoreVal = document.getElementById('score-val');
@@ -840,15 +909,15 @@ function displayResults(result) {
   if (summaryEl) {
     summaryEl.innerHTML = `
       <strong><i class="fa-solid fa-brain" style="color:var(--accent)" aria-hidden="true"></i> Analisis Konteks:</strong><br><br>
-      ${result.summary_text}`;
+      ${(result.summary_text || 'Ringkasan tidak tersedia.').replace(/\n/g, '<br>')}`;
   }
 
   // Score Cards
   const paths = document.getElementById('paths');
-  if (paths) {
+  if (paths && scores.length > 0) {
     paths.innerHTML = '<h3 class="section-title" style="margin-top:1.5rem"><i class="fa-solid fa-chart-bar" aria-hidden="true"></i> Skor Relevansi</h3>';
 
-    result.scores.sort((a, b) => b.score - a.score).forEach(o => {
+    [...scores].sort((a, b) => b.score - a.score).forEach(o => {
       const isTop = o.archetype.toUpperCase() === top;
       const color = o.score >= 70 ? 'var(--success)' : o.score >= 40 ? 'var(--warning)' : 'var(--danger)';
       const label = o.score >= 70 ? 'Siap Jalan' : o.score >= 40 ? 'Menengah' : 'Perlu Persiapan';
@@ -876,12 +945,12 @@ function displayResults(result) {
 function downloadPDF() {
   const savedData = JSON.parse(localStorage.getItem('savedAnalysis'));
   if (!savedData || !savedData.analysis) { 
-    showToast('Tidak ada data untuk diunduh.', 'error'); 
+    if (typeof showToast === 'function') showToast('Tidak ada data untuk diunduh.', 'error'); 
     return; 
   }
   
-  showToast('Menyiapkan PDF...', 'info');
-  logEvent('download_pdf');
+  if (typeof showToast === 'function') showToast('Menyiapkan PDF...', 'info');
+  if (typeof logEvent === 'function') logEvent('download_pdf');
 
   const saved = savedData.analysis;
   const profile = savedData.profile || {};
@@ -890,6 +959,8 @@ function downloadPDF() {
   const sL = { student: 'Pelajar/Mahasiswa', unemployed: 'Mencari Peluang Baru', employee: 'Karyawan Aktif', housewife: 'Ibu Rumah Tangga', entrepreneur: 'Self-Employed / Freelancer' };
   const gL = { income: 'Menambah Side Income', reorg: 'Transisi Karier', potensi: 'Eksplorasi Bakat', usaha: 'Membangun Bisnis' };
   
+  const userName = (typeof currentUser !== 'undefined' && currentUser?.name) ? currentUser.name : 'User';
+
   // Container Utama untuk PDF
   const el = document.createElement('div');
   el.style.cssText = `
@@ -901,7 +972,7 @@ function downloadPDF() {
     box-sizing: border-box;
   `;
 
-  // Template Konten
+  // Template Konten PDF
   el.innerHTML = `
     <style>
       body { font-family: 'Inter', Arial, sans-serif; color: #1f2937; }
@@ -924,14 +995,14 @@ function downloadPDF() {
 
     <div class="header">
       <h1 style="color: #1e3a8a; margin: 0; font-size: 24px;">Talent Operating System (TOS)</h1>
-      <p style="color: #4b5563; font-size: 13px; margin: 4px 0;">Laporan Analisis Strategi Personal - ${currentUser.name}</p>
+      <p style="color: #4b5563; font-size: 13px; margin: 4px 0;">Laporan Analisis Strategi Personal - ${userName}</p>
     </div>
 
     <div class="section">
       <h2 class="section-title">Profil Pengguna</h2>
       <div class="profile-grid">
-        <div class="profile-item"><span>Tujuan Utama:</span> <span>${gL[profile.goal] || 'Tidak diketahui'}</span></div>
-        <div class="profile-item"><span>Status Profesional:</span> <span>${sL[profile.status] || 'Tidak diketahui'}</span></div>
+        <div class="profile-item"><span>Tujuan Utama:</span> <span>${gL[profile.goal] || profile.goal || 'Tidak diketahui'}</span></div>
+        <div class="profile-item"><span>Status Profesional:</span> <span>${sL[profile.status] || profile.status || 'Tidak diketahui'}</span></div>
         <div class="profile-item"><span>Alokasi Waktu:</span> <span>${profile.time || 'Tidak diketahui'}</span></div>
         <div class="profile-item"><span>Perangkat Utama:</span> <span>${profile.device || 'Tidak diketahui'}</span></div>
       </div>
@@ -960,7 +1031,7 @@ function downloadPDF() {
           </tr>
         </thead>
         <tbody>
-          ${saved.scores.sort((a, b) => b.score - a.score).map(o => `
+          ${(saved.scores || []).sort((a, b) => b.score - a.score).map(o => `
             <tr>
               <td style="font-size: 13px;">${names[o.archetype.toUpperCase()] || o.archetype}</td>
               <td>
@@ -987,7 +1058,7 @@ function downloadPDF() {
           </tr>
         </thead>
         <tbody>
-          ${saved.plan.map((w, i) => `
+          ${(saved.plan || []).map((w, i) => `
             <tr>
               <td style="text-align: center; font-weight: 600; font-size: 14px;">${i + 1}</td>
               <td>
@@ -1013,7 +1084,7 @@ function downloadPDF() {
   // Konversi ke File PDF via html2pdf.js
   const opt = {
     margin:       10,
-    filename:     `TOS_Analysis_${currentUser.name.replace(/\s+/g, '_')}.pdf`,
+    filename:     `TOS_Analysis_${userName.replace(/\s+/g, '_')}.pdf`,
     image:        { type: 'jpeg', quality: 0.98 },
     html2canvas:  { scale: 2, useCORS: true },
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -1021,12 +1092,12 @@ function downloadPDF() {
 
   if (typeof html2pdf !== 'undefined') {
     html2pdf().set(opt).from(el).save().then(() => {
-      showToast('PDF berhasil diunduh!', 'success');
+      if (typeof showToast === 'function') showToast('PDF berhasil diunduh!', 'success');
     }).catch(err => {
       console.error("PDF Export Error:", err);
-      showToast('Gagal mengunduh PDF.', 'error');
+      if (typeof showToast === 'function') showToast('Gagal mengunduh PDF.', 'error');
     });
   } else {
-    showToast('Library html2pdf belum dimuat pada halaman ini.', 'error');
+    if (typeof showToast === 'function') showToast('Library html2pdf belum dimuat pada halaman ini.', 'error');
   }
 }
