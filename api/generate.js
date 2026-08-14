@@ -173,11 +173,49 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     // ======================
+    // Extract & Parse JSON from Gemini Response
+    // ======================
+    let analysisResult = null;
+    
+    try {
+      const geminiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!geminiText) {
+        console.error('[TOS] No text in Gemini response');
+        return res.status(502).json({
+          message: 'Gemini response format tidak valid'
+        });
+      }
+
+      // Extract JSON dari response (bisa dibungkus dalam markdown code block)
+      const jsonMatch = geminiText.match(/```json\n?([\s\S]*?)\n?```|({[\s\S]*})/);
+      const jsonString = jsonMatch ? (jsonMatch[1] || jsonMatch[2]) : geminiText;
+
+      analysisResult = JSON.parse(jsonString);
+      
+      // Validate struktur minimal
+      if (!analysisResult.top_archetype || !analysisResult.summary_text || !analysisResult.scores || !analysisResult.plan) {
+        console.error('[TOS] Invalid analysis structure:', Object.keys(analysisResult));
+        return res.status(502).json({
+          message: 'Format hasil analisis tidak sesuai'
+        });
+      }
+
+    } catch (parseErr) {
+      console.error('[TOS] JSON parse error:', parseErr.message);
+      console.error('[TOS] Gemini text:', data.candidates?.[0]?.content?.parts?.[0]?.text?.substring(0, 200));
+      
+      return res.status(502).json({
+        message: 'Gagal parse hasil analisis. Format tidak valid.'
+      });
+    }
+
+    // ======================
     // Save to Cache
     // ======================
     try {
       if (process.env.REDIS_URL && kv) {
-        await kv.set(cacheKey, data, { ex: 2592000 }); // 30 hari
+        await kv.set(cacheKey, analysisResult, { ex: 2592000 }); // 30 hari
       }
     } catch (err) {
       console.warn('[TOS] KV write error:', err.message);
@@ -186,7 +224,7 @@ export default async function handler(req, res) {
     console.log(`[TOS] CACHE MISS — ${ip}`);
     res.setHeader('X-Cache', 'miss');
 
-    return res.status(200).json(data);
+    return res.status(200).json(analysisResult);
 
   } catch (error) {
     console.error('[TOS] Fatal error:', error);

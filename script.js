@@ -511,21 +511,77 @@ async function generateAnalysis(userInputs) {
   logEvent("generate_analysis_start");
 
   try {
-    // Call Vercel Serverless Function
+    // Buat prompt dari user inputs dengan instruksi JSON yang jelas
+    const prompt = `Anda adalah Career AI Advisor berpengalaman. Analisis profil pengguna berikut dan berikan strategi karier yang personal dan actionable.
+
+PROFIL PENGGUNA:
+- Aspirasi Utama: ${userInputs.goal || 'Tidak disebutkan'}
+- Status Profesional: ${userInputs.status || 'Tidak disebutkan'}
+- Alokasi Waktu: ${userInputs.time || 'Tidak disebutkan'}
+- Perangkat Utama: ${userInputs.device || 'Tidak disebutkan'}
+${userInputs.text ? `- Konteks Tambahan: ${userInputs.text}` : ''}
+${userInputs.obstacles ? `- Hambatan/Tantangan: ${userInputs.obstacles}` : ''}
+${userInputs.skills ? `- Skill Saat Ini: ${userInputs.skills}` : ''}
+
+INSTRUKSI OUTPUT:
+Berikan response dalam format JSON VALID (bukan Markdown, pure JSON). Struktur wajib:
+
+{
+  "top_archetype": "MICRO|REMOTE|SERVICE|CRAFT (pilih yang paling relevan)",
+  "summary_text": "Ringkasan 2-3 paragraf rekomendasi karier berdasarkan profil. Gunakan Bahasa Indonesia yang baik.",
+  "scores": [
+    {"archetype": "MICRO", "score": 0-100},
+    {"archetype": "REMOTE", "score": 0-100},
+    {"archetype": "SERVICE", "score": 0-100},
+    {"archetype": "CRAFT", "score": 0-100}
+  ],
+  "plan": [
+    {
+      "week": 1,
+      "focus": "Judul fokus minggu 1 (max 50 karakter)",
+      "tasks": ["Task 1", "Task 2", "Task 3"]
+    },
+    // ... hingga week 14
+  ]
+}
+
+KETENTUAN PENTING:
+- JSON HARUS valid dan dapat di-parse
+- Scores harus number 0-100
+- Plan harus array dengan 14 items (minggu 1-14)
+- Setiap task harus praktis dan dapat dikerjakan
+- Summary text gunakan Bahasa Indonesia
+
+ARCHETYPE DEFINITIONS:
+- MICRO: Entrepreneur kecil, bisnis online, side hustle
+- REMOTE: Bekerja jarak jauh, freelancer profesional, digital nomad
+- SERVICE: Jasa konsultasi, coaching, personal branding
+- CRAFT: Keahlian teknis, produk digital, creative work`;
+
+    console.log('[TOS] Sending API request, prompt length:', prompt.length);
+
+    // Call Vercel Serverless Function dengan format yang benar
     const response = await fetch(API_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userInputs)
+      body: JSON.stringify({ prompt })  // Wrap dalam { prompt: ... }
     });
 
-    if (!response.ok) throw new Error("Gagal mengambil respon dari server API");
+    console.log('[TOS] API Response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[TOS] API Error response:', errorText);
+      throw new Error(`API Error ${response.status}: ${errorText}`);
+    }
 
     const resultData = await response.json();
+    console.log('[TOS] API Success, result received with archetype:', resultData.top_archetype);
     saveAndDisplay(userInputs, resultData);
     logEvent("generate_analysis_success");
 
   } catch (err) {
-    console.warn("API Error/Offline, menggunakan Fallback Data:", err);
+    console.error("API Error/Offline, menggunakan Fallback Data:", err);
 
     const goalKey = userInputs.goal || 'income';
     const fallbackResult = FALLBACK[goalKey] || FALLBACK.income;
