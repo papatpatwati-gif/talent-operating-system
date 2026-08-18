@@ -76,8 +76,10 @@
     const SUPABASE_URL = "https://whuzxtfrhdrbfxgkbjmr.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndodXp4dGZyaGRyYmZ4Z2tiam1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MTc4OTUsImV4cCI6MjEwMjI5Mzg5NX0.bl-QVm-ck5LF61TdbIirk6zBBww7P1ocJEtffrjURes";
 
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // URL Apps Script (Ganti dengan URL Deployment Google Apps Script Anda)
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx5xeWz2JdpPkpYAf1XqtQSbNchE8Rn-y7nHZ57deO4FBBrv0V9AD5S-IEauwSt01xv5A/exec";
 
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const CURRENT_APP_NAME = "Talent Operating System";
 
     // 2. Ambil data session user dari localStorage (jika ada)
@@ -142,7 +144,36 @@
       if (error) console.error("Supabase Presence Error:", error);
     }
 
-    // 5. Handling Form Submit (Login/Masuk)
+    // 5. Fungsi Send Data ke Google Sheets via Google Apps Script
+    async function sendToGoogleSheet(userData) {
+      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("AKfycbx...")) {
+        console.warn("GOOGLE_SCRIPT_URL belum diisi!");
+        return;
+      }
+
+      const payload = {
+        app_name: CURRENT_APP_NAME,
+        name: userData.name,
+        phone: userData.phone,
+        device: getDeviceType(),
+        timestamp: new Date().toLocaleString("id-ID")
+      };
+
+      try {
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+      } catch (err) {
+        console.error("Google Sheet Send Error:", err);
+      }
+    }
+
+    // 6. Handling Form Submit (Login/Masuk)
     document.getElementById('loginForm').addEventListener('submit', async function (e) {
       e.preventDefault();
 
@@ -158,9 +189,12 @@
       // Simpan data di browser
       localStorage.setItem("app_user", JSON.stringify(currentUser));
 
-      // Catat Event Login & Presence ke Supabase
-      await logEvent("user_login");
-      await trackPresence();
+      // Kirim Data Paralel (Supabase + Google Sheet)
+      await Promise.all([
+        logEvent("user_login"),
+        trackPresence(),
+        sendToGoogleSheet(currentUser)
+      ]);
 
       alert("Berhasil masuk! Data tersimpan.");
 
@@ -175,6 +209,6 @@
       document.getElementById('userName').value = currentUser.name;
       document.getElementById('userPhone').value = currentUser.phone;
     }
-  </script>
+</script>
 </body>
 </html>
