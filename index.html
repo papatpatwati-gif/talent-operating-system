@@ -145,33 +145,35 @@
     }
 
     // 5. Fungsi Send Data ke Google Sheets via Google Apps Script
-    async function sendToGoogleSheet(userData) {
-      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("AKfycbx...")) {
-        console.warn("GOOGLE_SCRIPT_URL belum diisi!");
-        return;
-      }
+   // 5. Fungsi Send Data ke Google Sheets via Google Apps Script
+async function sendToGoogleSheet(userData) {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("AKfycbx...")) {
+    console.warn("GOOGLE_SCRIPT_URL belum diisi!");
+    return;
+  }
 
-      const payload = {
-        app_name: CURRENT_APP_NAME,
-        name: userData.name,
-        phone: userData.phone,
-        device: getDeviceType(),
-        timestamp: new Date().toLocaleString("id-ID")
-      };
+  const payload = {
+    app_name: CURRENT_APP_NAME,
+    appName: CURRENT_APP_NAME, // Tambahkan ini sebagai fallback
+    name: userData.name,
+    phone: userData.phone,
+    device: getDeviceType(),
+    timestamp: new Date().toLocaleString("id-ID")
+  };
 
-      try {
-        await fetch(GOOGLE_SCRIPT_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
-        });
-      } catch (err) {
-        console.error("Google Sheet Send Error:", err);
-      }
-    }
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    console.error("Google Sheet Send Error:", err);
+  }
+}
 
     // 6. Handling Form Submit (Login/Masuk)
     document.getElementById('loginForm').addEventListener('submit', async function (e) {
