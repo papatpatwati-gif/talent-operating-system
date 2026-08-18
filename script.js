@@ -82,7 +82,7 @@ function getDeviceType() {
 }
 
 // 3. URL Webhook Google Apps Script (Opsional Backup)
-const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzCaJaVYhxGkpCfEJ2-ga7IedvvAbAq1uOqLBZnZ1WP0ZejDrgHIg-qlBarcSdMa5Zrow/exec";
+const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbx5xeWz2JdpPkpYAf1XqtQSbNchE8Rn-y7nHZ57deO4FBBrv0V9AD5S-IEauwSt01xv5A/exec";
 
 // 4. Fungsi Log Event ke Supabase & Google Sheets
 async function logEvent(eventName = "page_view", extraData = {}) {
@@ -110,17 +110,15 @@ async function logEvent(eventName = "page_view", extraData = {}) {
 
   // B. Simpan Otomatis ke Google Sheets (Backup)
   if (GOOGLE_SHEETS_WEBHOOK_URL) {
-    const payload = {
-      appName: CURRENT_APP_NAME,
-      userName: currentUser.name,
-      userPhone: currentUser.phone,
-      event: eventName,
-      path: window.location.pathname,
-      device: device,
-      userAgent: navigator.userAgent,
-      dateStr: todayStr,
-      ...extraData
-    };
+     const payload = {
+    appName: CURRENT_APP_NAME,
+    name: userData.name,
+    phone: userData.phone,
+    event: eventName,
+    path: window.location.pathname,
+    device: getDeviceType()
+  };
+
 
     fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
       method: "POST",
@@ -140,12 +138,14 @@ async function trackPresence() {
 
   try {
     const payload = {
-      app_name: CURRENT_APP_NAME,
-      user_name: currentUser.name,
-      user_phone: currentUser.phone,
-      path: window.location.pathname,
-      device: getDeviceType(),
-      last_seen: new Date().toISOString()
+    appName: CURRENT_APP_NAME,
+    name: userData.name,
+    phone: userData.phone,
+    event: eventName,
+    path: window.location.pathname,
+    device: getDeviceType()
+  };
+
     };
 
     const { data, error } = await tosSupabase
